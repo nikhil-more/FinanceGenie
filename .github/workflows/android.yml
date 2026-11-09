@@ -1,0 +1,52 @@
+name: Android checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install required Android SDK packages
+        run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0' 'platform-tools'
+      - name: Check repository hygiene
+        run: python3 scripts/check_repository.py
+      - name: Build and analyze
+        run: >-
+          ./gradlew --no-daemon
+          :apps:android:assembleDebug
+          :apps:android:testDebugUnitTest
+          :apps:android:lintDebug
+          :apps:android:assembleDebugAndroidTest
+          :apps:android:assembleRelease
+      - name: Upload build reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-reports
+          path: apps/android/build/reports/
+          if-no-files-found: ignore
+      - name: Upload development APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: financegenie-dev
+          path: apps/android/build/outputs/apk/debug/android-debug.apk

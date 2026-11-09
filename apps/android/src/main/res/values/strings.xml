@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FinanceGenie</string>
+    <string name="destination_overview">Overview</string>
+    <string name="destination_transactions">Transactions</string>
+    <string name="destination_budgets">Budgets</string>
+    <string name="destination_settings">Settings</string>
+    <string name="overview_empty_title">Your ledger starts here</string>
+    <string name="overview_empty_description">Your spending, income and monthly progress will come together here as you record your finances.</string>
+    <string name="transactions_empty_title">No transactions yet</string>
+    <string name="transactions_empty_description">The transactions you record will appear here, with their accounts and categories.</string>
+    <string name="budgets_empty_title">Make room for your goals</string>
+    <string name="budgets_empty_description">Your monthly budgets and spending progress will appear here once they are set up.</string>
+    <string name="settings_empty_title">Private from the start</string>
+    <string name="settings_empty_description">No account is required. Accounts, categories and privacy controls will be available here as FinanceGenie grows.</string>
+</resources>
