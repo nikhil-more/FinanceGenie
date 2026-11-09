@@ -31,6 +31,24 @@ Step 4 automated acceptance on the connected A063 is recorded in the verificatio
   confirmed on the A063 on 9 November 2026.
 
 Step 4 is PASS with automated evidence and the user's manual phone confirmations.
+
+Step 5 acceptance on the same phone:
+
+- [x] Overall/category limits are independent; zero and no-budget states differ.
+- [x] ₹5,000 limit and ₹4,000 spending show ₹1,000 remaining; another ₹1,500
+  shows ₹500 over, with text warnings at the documented thresholds.
+- [x] Later-month refunds, negative net spend, backdated edits and transfer exclusion
+  agree between domain reports and the budget UI.
+- [x] Next-month copy preserves source/existing target values, uses new IDs, skips
+  archived categories and rolls back partial failure. December targets January.
+- [x] Duplicate/stale saves and stale copy/removal are protected; explicit removal
+  preserves financial records and other monthly limits.
+- [x] Budget values survive rotation and a separately verified process restart.
+- [x] A 200% font/dark budget layout is readable and its controls are reachable;
+  navigation/transaction/privacy regression tests pass.
+
+Step 5 is PASS. Budget-specific human TalkBack review belongs in the full-app
+accessibility walkthrough at Gate A; it is not claimed by the automated layout test.
 Do not mark Gate A complete:
-budgets, charts/performance, imports, recovery and actual OS backup behavior still
+charts/performance, imports, recovery and actual OS backup behavior still
 have their later gates. Recovery is required before using real personal finances.

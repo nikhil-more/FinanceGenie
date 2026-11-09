@@ -118,6 +118,7 @@ private fun DateField(value: String, onChange: (String) -> Unit, @StringRes labe
 internal fun LedgerForm(draft: LedgerEditor, ledger: StoredLedger, error: Int?, busy: Boolean,
     update: (LedgerEditor) -> Unit, save: () -> Unit, close: () -> Unit) {
     val title = when (draft) {
+        is BudgetDraft -> if (draft.original == null) R.string.add_budget else R.string.edit_budget
         is AccountDraft -> if (draft.expectedRevision == null) R.string.add_account else R.string.edit_account
         is CategoryDraft -> if (draft.expectedRevision == null) R.string.add_category else R.string.edit_category
         is ObservationDraft -> R.string.record_balance
@@ -139,6 +140,21 @@ internal fun LedgerForm(draft: LedgerEditor, ledger: StoredLedger, error: Int?, 
             Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (draft) {
+                    is BudgetDraft -> {
+                        FormField(draft.month, { update(draft.copy(month = it)) }, R.string.budget_month, "field_month", enabled = draft.original == null)
+                        if (draft.original != null) {
+                            Text(budgetScopeLabel(draft.categoryId, ledger), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.budget_edit_help))
+                        } else {
+                            val scopes = listOf(Choice("overall", stringResource(R.string.budget_overall))) +
+                                ledger.categories.filterNot { it.value.isArchived }.map { Choice("category:${it.value.id}", it.value.name) }
+                            ChoiceField(stringResource(R.string.budget_scope), budgetScopeKey(draft.categoryId), scopes, "field_budget_scope") {
+                                update(draft.copy(categoryId = if (it == "overall") null else it.removePrefix("category:")))
+                            }
+                        }
+                        FormField(draft.amount, { update(draft.copy(amount = it)) }, R.string.budget_limit, "field_amount", decimal = true)
+                        Text(stringResource(R.string.budget_zero_help))
+                    }
                     is AccountDraft -> {
                         FormField(draft.name, { update(draft.copy(name = it)) }, R.string.account_name, "field_name")
                         ChoiceField(stringResource(R.string.account_type), draft.kind.name, AccountKind.entries.map { Choice(it.name, stringResource(accountLabel(it))) }, "field_kind") {

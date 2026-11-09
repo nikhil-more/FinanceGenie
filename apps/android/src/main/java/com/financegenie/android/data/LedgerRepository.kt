@@ -9,6 +9,7 @@ import com.financegenie.android.domain.LedgerDates
 import com.financegenie.android.domain.LedgerSnapshot
 import com.financegenie.android.domain.LedgerTransaction
 import com.financegenie.android.domain.MonthlyBudget
+import java.time.YearMonth
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 
@@ -102,12 +103,16 @@ class DuplicateRecordException : IllegalArgumentException("A record with this ID
 
 class StaleRecordException : IllegalStateException("This record changed; reload it before saving or undoing")
 
+data class BudgetCopyResult(val createdCount: Int, val existingCount: Int, val archivedCount: Int)
+
 interface LedgerRepository {
     suspend fun read(): StoredLedger
     fun observe(): Flow<StoredLedger>
     suspend fun saveAccount(account: LedgerAccount, expectedRevision: Long? = null): RecordMetadata
     suspend fun saveCategory(category: LedgerCategory, expectedRevision: Long? = null): RecordMetadata
     suspend fun saveBudget(budget: MonthlyBudget, expectedRevision: Long? = null): RecordMetadata
+    suspend fun removeBudget(id: UUID, expectedRevision: Long)
+    suspend fun copyBudgetsToNextMonth(fromMonth: YearMonth, expectedLedgerRevision: Long): BudgetCopyResult
     suspend fun saveObservation(observation: BalanceObservation, expectedRevision: Long? = null): RecordMetadata
 
     /** All events, evidence and prior versions commit together or not at all. */

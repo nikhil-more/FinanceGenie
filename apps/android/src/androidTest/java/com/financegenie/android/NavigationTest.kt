@@ -40,7 +40,9 @@ class NavigationTest {
     @Test
     fun selectedDestinationSurvivesActivityRecreation() {
         compose.onNodeWithTag("tab_budgets").performClick()
+        compose.waitTag("add_budget")
         compose.activityRule.scenario.recreate()
+        compose.waitTag("add_budget")
         compose.onNodeWithTag("tab_budgets").assertIsSelected()
         compose.onNodeWithText(compose.activity.getString(R.string.budgets_empty_title))
             .assertIsDisplayed()

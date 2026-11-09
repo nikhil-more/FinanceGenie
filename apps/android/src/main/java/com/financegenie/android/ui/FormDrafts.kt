@@ -5,6 +5,7 @@ import com.financegenie.android.R
 import com.financegenie.android.data.TransactionDetails
 import com.financegenie.android.data.TransactionRecord
 import com.financegenie.android.data.TransactionWrite
+import com.financegenie.android.data.StoredRecord
 import com.financegenie.android.domain.AccountKind
 import com.financegenie.android.domain.AdjustmentDirection
 import com.financegenie.android.domain.BalanceObservation
@@ -13,14 +14,39 @@ import com.financegenie.android.domain.LedgerCategory
 import com.financegenie.android.domain.LedgerDates
 import com.financegenie.android.domain.LedgerTransaction
 import com.financegenie.android.domain.Money
+import com.financegenie.android.domain.MonthlyBudget
 import com.financegenie.android.domain.TransactionKind
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeParseException
 import java.util.UUID
 
 sealed interface LedgerEditor { val id: UUID }
+
+data class BudgetDraft(
+    override val id: UUID,
+    val original: StoredRecord<MonthlyBudget>? = null,
+    val month: String,
+    val categoryId: String? = null,
+    val amount: String = "",
+) : LedgerEditor {
+    fun budget(): MonthlyBudget {
+        val parsedMonth = try {
+            require(Regex("[0-9]{4}-(0[1-9]|1[0-2])").matches(month.trim()))
+            YearMonth.parse(month.trim()).also { require(it.year in 1..9999) }
+        } catch (_: IllegalArgumentException) {
+            throw FormValidation(R.string.error_budget_month)
+        } catch (_: DateTimeParseException) {
+            throw FormValidation(R.string.error_budget_month)
+        }
+        val limit = try { Money.parseAmount(amount, allowZero = true) } catch (_: IllegalArgumentException) {
+            throw FormValidation(R.string.error_budget_amount)
+        }
+        return MonthlyBudget(id, parsedMonth, limit, categoryId)
+    }
+}
 
 data class AccountDraft(
     override val id: UUID,

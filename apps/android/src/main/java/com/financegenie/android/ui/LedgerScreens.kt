@@ -32,6 +32,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import com.financegenie.android.R
 import com.financegenie.android.data.TransactionRecord
 import com.financegenie.android.data.TransactionSource
@@ -71,11 +72,14 @@ private fun magnitudeMoney(minor: Long): String = NumberFormat.getCurrencyInstan
     val previous = stringResource(R.string.previous_month)
     val next = stringResource(R.string.next_month)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        TextButton(onClick = { model.moveMonth(-1) }, modifier = Modifier.testTag("previous_month").semantics { contentDescription = previous }) {
+        TextButton(onClick = { model.moveMonth(-1) }, enabled = state.filters.month > java.time.YearMonth.of(1, 1),
+            modifier = Modifier.testTag("previous_month").semantics { contentDescription = previous }) {
             Text("‹", style = MaterialTheme.typography.headlineSmall) }
         Text(state.filters.month.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())),
-            style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp).testTag("selected_month"))
-        TextButton(onClick = { model.moveMonth(1) }, modifier = Modifier.testTag("next_month").semantics { contentDescription = next }) { Text("›", style = MaterialTheme.typography.headlineSmall) }
+            style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f).padding(top = 12.dp).testTag("selected_month"))
+        TextButton(onClick = { model.moveMonth(1) }, enabled = state.filters.month < java.time.YearMonth.of(9999, 12),
+            modifier = Modifier.testTag("next_month").semantics { contentDescription = next }) { Text("›", style = MaterialTheme.typography.headlineSmall) }
     }
 }
 

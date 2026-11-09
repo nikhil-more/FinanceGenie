@@ -184,3 +184,36 @@ References checked for this implementation:
 - [Android device-credential confirmation](https://developer.android.com/reference/android/app/KeyguardManager#createConfirmDeviceCredentialIntent(java.lang.CharSequence,java.lang.CharSequence))
 - [Secure window flag](https://developer.android.com/reference/android/view/WindowManager.LayoutParams#FLAG_SECURE)
 - [AOSP Android 15 recents policy implementation](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-15.0.0_r1/core/java/android/app/Activity.java#L9037)
+
+## 2026-11-09 — Step 5 calendar budgets
+
+- **Financial behavior:** Independent overall/category caps, one per month/scope,
+  with exact integer-paise remaining and separate gross/refund/net values from the
+  domain report. Transfers, income, adjustments and deleted events are excluded.
+  Later refunds can produce negative net spending and more remaining than the cap.
+- **Navigation:** Share one selected month across Overview, Transactions and Budgets,
+  including future planning months. Future reports show actual recorded activity,
+  while account estimates remain clamped to today; no forecast is implied. Supported
+  form/navigation years are 0001–9999. Existing transaction date validation stays intact.
+- **Limit identity:** Edit only the amount of an existing month/scope. Enforce this
+  at both UI and repository boundaries so an edit cannot move a historical cap.
+  A zero cap is real; removal returns the scope to no-budget state. Removal is a
+  confirmed, revision-checked deletion of configuration, preserving financial rows.
+  Revisit budget tombstones when actual sync is introduced, rather than adding
+  cloud/audit infrastructure to the offline step.
+- **Copy:** Explicit preview/confirmation, new IDs, one Room transaction, existing
+  destination values preserved and archived-category sources skipped. A complete
+  ledger revision guards the preview, trading occasional rejection of unrelated
+  intervening edits for a simple consistent contract. Reopen to review the current
+  plan. Copying nothing does not bump the ledger revision. Schema v1 is unchanged.
+- **Warnings:** Text-based in-app states at 80%/100%/over limit; exact arithmetic,
+  no OS alert permission or scheduling. A zero cap with zero net spending is at
+  limit. Refunds can clear a warning. Threshold customization and rollover remain
+  outside this step.
+- **UI:** Scrollable cards include textual expenses/refunds/remaining and explicit
+  warning/over-by labels. These provide accessible amounts without introducing
+  charts before Step 6. Stable drafts/revisions, duplicate-save prevention, locked
+  window inheritance and existing profile isolation are reused.
+- **Verification:** Domain, atomic-storage, UI, large-font and process-restart checks
+  pass and are recorded in the Step 5 verification entry. No claimed migration
+  exists because this step changes queries/operations rather than table definitions.

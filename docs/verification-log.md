@@ -355,3 +355,84 @@ are maintained in [progress_tracker.md](../progress_tracker.md).
   not passed. Calendar-budget management,
   charts/performance, portable recovery and actual backup behavior retain their
   later planned gates.
+
+## Step 5 — Calendar budgets — 2026-11-09
+
+- **Implemented:** Overall/category monthly limits, create/edit/remove, shared
+  past/future month navigation, expenses/refunds/net/remaining/over-by text,
+  80%/at-limit/overspent in-app warnings, and explicit atomic next-month copying.
+  Existing target caps and source months are preserved; new records receive new
+  IDs, archived sources are skipped, and a ledger-revision check protects previews.
+  Monthly scope identity is fixed during edits. Zero remains a real limit.
+- **Build command:**
+
+  ```bash
+  GRADLE_USER_HOME=/tmp/financegenie-gradle-home ANDROID_USER_HOME=/tmp/financegenie-android-user ./gradlew --offline --no-daemon --max-workers=2 :apps:android:testDebugUnitTest :apps:android:assembleDebug :apps:android:assembleDebugAndroidTest :apps:android:lintDebug :apps:android:assembleRelease
+  ```
+
+- **Build results:** PASS — full command **BUILD SUCCESSFUL in 39s**, 128 tasks
+  (46 executed, 82 up-to-date). **55 JVM tests** pass with zero failures/errors/skips,
+  including ten new budget-planning/report/warning cases. Debug, unsigned release
+  and test APKs build; lint has **No issues found**. After test synchronization
+  updates, test APK/lint build also passes in 20s (56 tasks). No application source
+  changed after the full build/domain run.
+- **Phone storage:** The combined `--ui` driver first passed **OK (23 tests)** in
+  1.000s on A063 / Android 15 / API 35, followed by the two explicit storage
+  process-restart stages (**OK (1 test)** each). Six new repository tests verify
+  copy counts/fresh IDs, source and existing-target metadata preservation,
+  rollback after an injected failure on the second insert, stale preview rejection,
+  archived/no-op behavior, immutable scope and revision-checked removal while
+  preserving transactions and other months. Schema v1 and its exported JSON are
+  unchanged; this is not a migration.
+- **Budget UI command:**
+
+  ```bash
+  ADB_SERVER_SOCKET=localfilesystem:/tmp/financegenie-adb.sock python3 scripts/verify_storage_on_device.py --budget-ui-only
+  ```
+
+- **Budget UI:** PASS — **OK (5 tests)** in 43.619s. Tests enter independent
+  overall/Food limits and ₹4,000/₹1,500 expenses, verify ₹1,000 remaining then
+  ₹500 over, change only the overall cap, and recreate the activity. Other cases
+  cover invalid month/negative limit, zero/no budget, duplicate and same-frame save,
+  removal, future-month copy preserving an existing ₹9,000 target, new IDs and
+  unchanged source metadata, dialog recreation, and stale copy/edit errors.
+- **Historical UI journey:** A November ₹4,000 purchase and bank/cash transfer
+  leave ₹1,000 from a ₹5,000 cap. A December ₹1,000 refund shows ₹0 expenses,
+  ₹1,000 refunds, −₹1,000 net and ₹6,000 remaining. Moving/correcting the purchase
+  to December ₹5,500 restores November remaining to ₹5,000 and leaves December
+  ₹4,500 net/₹500 remaining. UI and domain expectations agree without rollover.
+- **UI process restart:** Seed instrumentation records a ₹199.50 expense and ₹500
+  overall budget through the forms (**OK (1 test)**, 9.297s). After force-stopping
+  only FinanceGenie Dev, reader instrumentation asserts a different process and
+  the same ₹500 limit/₹300.50 remaining plus exact stored values (**OK (1 test)**,
+  3.701s). Probe-owned DB/preferences are removed. App launch returns **Status: ok**,
+  TotalTime 862ms (one observation, not a benchmark).
+- **Regression:** The first broader UI run found test assumptions about immediate
+  background-flow completion and the destination after unlocking. Filter tests
+  now wait for the specified row absence/presence; lock tests require a resumed
+  activity, verify the financial gate opens and explicitly navigate to Overview.
+  No production lock policy or expected financial result was relaxed. The final
+  navigation/entry/privacy/error/layout rerun passes **OK (12 tests)** in 81.150s,
+  with no skipped cases. It launches the development app successfully afterward.
+- **Layout:** The regression includes entering a budget at Compose-local 200% font
+  in dark mode. Its synthetic budget screenshot was retrieved from the test app
+  cache to `/tmp/financegenie-step5-font200-dark-budget.png` and visually inspected:
+  readable amounts and reachable edit/remove actions, with scrolling. Existing
+  form navigation/light-theme checks also pass. This does not claim a new human
+  budget-specific TalkBack run; that remains in the full-app Gate A walkthrough.
+- **Isolation/privacy:** Tests use only their injected in-memory/test-named DBs and
+  dedicated preferences, never the normal ledger. There is no `pm clear`, personal
+  screenshot, global accessibility change, notification permission or background
+  alert scheduling. PIN entry is untouched. Copied/removed limits are configuration;
+  financial transaction history is preserved. Repo hygiene and diff checks pass.
+- **Evidence:** `/tmp/financegenie-step5-checks.log`,
+  `/tmp/financegenie-step5-phone.log` (storage),
+  `/tmp/financegenie-step5-budget-phone.log`,
+  `/tmp/financegenie-step5-regression-build.log`,
+  `/tmp/financegenie-step5-regression-phone.log`, JVM/lint reports and repository
+  tests/driver. `--ui` reproduces storage, regression, budget and restart checks;
+  `--budget-ui-only` runs the budget subset/probe. Remote CI is separate from these
+  local/device results.
+- **Status:** Step 5 PASS. Next is Step 6 offline analytics and measured performance.
+  Gate A remains outstanding until its other features and recovery/accessibility/
+  backup acceptance checks are complete.

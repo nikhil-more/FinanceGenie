@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="add_budget">Add budget</string>
+    <string name="edit_budget">Edit budget</string>
+    <string name="remove_budget">Remove budget</string>
+    <string name="budget_overall">Overall budget</string>
+    <string name="budget_scope">Budget scope</string>
+    <string name="budget_month">Month (YYYY-MM)</string>
+    <string name="budget_limit">Monthly limit (INR)</string>
+    <string name="budget_help">Set independent overall and category limits for each calendar month. Future months can be planned; limits do not roll over automatically.</string>
+    <string name="budget_zero_help">A ₹0 limit is a real budget. Remove a budget to leave its scope without a limit.</string>
+    <string name="budget_edit_help">This changes only this limit. To use another month or category, add a separate budget.</string>
+    <string name="budget_no_overall">No overall budget set</string>
+    <string name="budget_no_overall_help">Category limits still apply independently. They do not add up to an overall allowance.</string>
+    <string name="budget_set_overall">Set overall limit</string>
+    <string name="budget_remaining">Remaining</string>
+    <string name="budget_over_by">Over by</string>
+    <string name="budget_near_limit">Approaching limit</string>
+    <string name="budget_at_limit">At limit</string>
+    <string name="budget_over_limit">Limit exceeded</string>
+    <string name="budget_warning_help">Warnings appear here from 80%% of the limit. Refunds reduce spending in the month received, so remaining can exceed the limit. Transfers and adjustments are excluded.</string>
+    <string name="copy_budgets">Copy limits to next month</string>
+    <string name="copy_budget_title">Copy limits to %1$s?</string>
+    <string name="copy_budget_preview">From %1$s\nNew limits: %2$d\nExisting limits kept: %3$d\nArchived category limits skipped: %4$d</string>
+    <string name="copy_budget_help">Only limits are copied, with new records. Recorded transactions, source-month limits and existing destination limits stay unchanged.</string>
+    <string name="copy_budget_confirm">Copy limits</string>
+    <string name="remove_budget_title">Remove %1$s for %2$s?</string>
+    <string name="remove_budget_help">This removes only the monthly limit. Recorded transactions and limits for other months remain intact.</string>
+    <string name="budget_edit_action">Edit %1$s</string>
+    <string name="budget_remove_action">Remove %1$s</string>
+    <string name="budget_saved">Budget saved</string>
+    <string name="budget_removed">Budget removed</string>
+    <string name="budgets_copied">Copy complete. Existing limits were preserved.</string>
+    <string name="error_budget_month">Enter a month using YYYY-MM, with a year from 0001 to 9999.</string>
+    <string name="error_budget_amount">Enter a non-negative INR limit with no more than two decimal places.</string>
+    <string name="error_budget_exists">This month and scope already have a budget. Edit that limit instead.</string>
+    <string name="error_budget_changed">The ledger changed. Close and reopen this confirmation before trying again.</string>
+</resources>

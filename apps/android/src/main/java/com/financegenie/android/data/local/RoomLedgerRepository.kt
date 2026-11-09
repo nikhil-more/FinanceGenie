@@ -2,6 +2,7 @@ package com.financegenie.android.data.local
 
 import androidx.room.withTransaction
 import com.financegenie.android.data.DuplicateRecordException
+import com.financegenie.android.data.BudgetCopyResult
 import com.financegenie.android.data.LedgerRepository
 import com.financegenie.android.data.RecordMetadata
 import com.financegenie.android.data.SourceEvidenceInput
@@ -16,7 +17,9 @@ import com.financegenie.android.domain.LedgerAccount
 import com.financegenie.android.domain.LedgerCategory
 import com.financegenie.android.domain.LedgerValidator
 import com.financegenie.android.domain.MonthlyBudget
+import com.financegenie.android.domain.planBudgetCopy
 import java.time.Clock
+import java.time.YearMonth
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -58,11 +61,34 @@ class RoomLedgerRepository(
     override suspend fun saveBudget(budget: MonthlyBudget, expectedRevision: Long?): RecordMetadata = mutate { before ->
         val old = before.budgets.find { it.value.id == budget.id }
         val metadata = nextMetadata(old?.metadata, expectedRevision)
+        require(old == null || (old.value.month == budget.month && old.value.categoryId == budget.categoryId)) {
+            "Budget month and category cannot change"
+        }
         val after = before.snapshot.copy(budgets = before.snapshot.budgets.filterNot { it.id == budget.id } + budget)
         validator.validateChange(before.snapshot, after)
         val row = budget.toEntity(metadata)
         if (old == null) dao.insertBudget(row) else dao.updateBudget(row)
         metadata
+    }
+
+    override suspend fun removeBudget(id: UUID, expectedRevision: Long) = mutate { before ->
+        val old = before.budgets.find { it.value.id == id } ?: throw StaleRecordException()
+        if (old.metadata.revision != expectedRevision) throw StaleRecordException()
+        validator.validateChange(before.snapshot, before.snapshot.copy(budgets = before.snapshot.budgets.filterNot { it.id == id }))
+        dao.deleteBudget(id)
+    }
+
+    override suspend fun copyBudgetsToNextMonth(fromMonth: YearMonth, expectedLedgerRevision: Long): BudgetCopyResult = database.withTransaction {
+        val before = load()
+        if (before.settings.revision != expectedLedgerRevision) throw StaleRecordException()
+        val plan = planBudgetCopy(before.snapshot, fromMonth)
+        val copies = plan.toCopy.map { it.copy(id = UUID.randomUUID(), month = plan.toMonth) }
+        if (copies.isNotEmpty()) {
+            validator.validateChange(before.snapshot, before.snapshot.copy(budgets = before.snapshot.budgets + copies))
+            dao.insertBudgets(copies.map { it.toEntity(nextMetadata(null, null)) })
+            dao.setRevision(Math.addExact(before.settings.revision, 1L))
+        }
+        BudgetCopyResult(copies.size, plan.existingCount, plan.archivedCount)
     }
 
     override suspend fun saveObservation(observation: BalanceObservation, expectedRevision: Long?): RecordMetadata = mutate { before ->

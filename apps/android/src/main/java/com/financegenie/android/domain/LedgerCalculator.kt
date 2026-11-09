@@ -15,6 +15,8 @@ data class LedgerReport(
     val incomeMinor: Long,
     val adjustmentsMinor: Long,
     val categoryNetSpendingMinor: Map<String, Long>,
+    val categoryGrossSpendingMinor: Map<String, Long>,
+    val categoryRefundsMinor: Map<String, Long>,
     val dailyNetSpendingMinor: Map<LocalDate, Long>,
     val monthlyNetSpendingMinor: Map<YearMonth, Long>,
 ) {
@@ -23,9 +25,19 @@ data class LedgerReport(
     val totalTrackedPositionMinor: Long = Money.sum(accountPositionsMinor.values)
 }
 
-data class BudgetProgress(val budget: MonthlyBudget, val netSpendingMinor: Long) {
+enum class BudgetWarning { NONE, NEAR_LIMIT, AT_LIMIT, OVER_LIMIT }
+
+data class BudgetProgress(val budget: MonthlyBudget, val grossSpendingMinor: Long, val refundsMinor: Long) {
+    val netSpendingMinor: Long = Money.subtract(grossSpendingMinor, refundsMinor)
     val remainingMinor: Long = Money.subtract(budget.limitMinor, netSpendingMinor)
     val isOverspent: Boolean = remainingMinor < 0L
+    val warning: BudgetWarning = when {
+        isOverspent -> BudgetWarning.OVER_LIMIT
+        remainingMinor == 0L -> BudgetWarning.AT_LIMIT
+        budget.limitMinor > 0 && BigInteger.valueOf(netSpendingMinor).multiply(BigInteger.valueOf(5)) >=
+            BigInteger.valueOf(budget.limitMinor).multiply(BigInteger.valueOf(4)) -> BudgetWarning.NEAR_LIMIT
+        else -> BudgetWarning.NONE
+    }
 }
 
 data class BalanceReconciliation(val observation: BalanceObservation, val estimatedBalanceMinor: Long) {
@@ -46,6 +58,8 @@ class LedgerCalculator(private val clock: Clock = Clock.systemUTC()) {
         val active = snapshot.transactions.filterNot { it.isDeleted }
         val period = active.filter { it.effectiveDate in range }
         val categories = mutableMapOf<String, BigInteger>()
+        val categoryExpenses = mutableMapOf<String, BigInteger>()
+        val categoryRefunds = mutableMapOf<String, BigInteger>()
         val days = mutableMapOf<LocalDate, BigInteger>()
         val months = mutableMapOf<YearMonth, BigInteger>()
         period.forEach { transaction ->
@@ -54,7 +68,10 @@ class LedgerCalculator(private val clock: Clock = Clock.systemUTC()) {
                 TransactionKind.REFUND -> -transaction.amountMinor
                 else -> return@forEach
             }
-            categories.add(requireNotNull(transaction.spendingCategoryId), netAmount)
+            val category = requireNotNull(transaction.spendingCategoryId)
+            categories.add(category, netAmount)
+            if (transaction.kind == TransactionKind.EXPENSE) categoryExpenses.add(category, transaction.amountMinor)
+            else categoryRefunds.add(category, transaction.amountMinor)
             days.add(transaction.effectiveDate, netAmount)
             months.add(YearMonth.from(transaction.effectiveDate), netAmount)
         }
@@ -67,6 +84,8 @@ class LedgerCalculator(private val clock: Clock = Clock.systemUTC()) {
             incomeMinor = Money.sum(period.filter { it.kind == TransactionKind.INCOME }.map { it.amountMinor }),
             adjustmentsMinor = Money.sum(period.filter { it.kind == TransactionKind.ADJUSTMENT }.map { adjustmentEffect(it) }),
             categoryNetSpendingMinor = categories.toSortedMap().mapValues { Money.checkedTotal(it.value) },
+            categoryGrossSpendingMinor = categoryExpenses.toSortedMap().mapValues { Money.checkedTotal(it.value) },
+            categoryRefundsMinor = categoryRefunds.toSortedMap().mapValues { Money.checkedTotal(it.value) },
             dailyNetSpendingMinor = days.toSortedMap().mapValues { Money.checkedTotal(it.value) },
             monthlyNetSpendingMinor = months.toSortedMap().mapValues { Money.checkedTotal(it.value) },
         )
@@ -74,9 +93,9 @@ class LedgerCalculator(private val clock: Clock = Clock.systemUTC()) {
 
     fun budgetProgress(budget: MonthlyBudget, report: LedgerReport): BudgetProgress {
         require(report.range == DateRange.month(budget.month)) { "Budget and report periods must match" }
-        val spending = budget.categoryId?.let { report.categoryNetSpendingMinor[it] ?: 0L }
-            ?: report.netSpendingMinor
-        return BudgetProgress(budget, spending)
+        val expenses = budget.categoryId?.let { report.categoryGrossSpendingMinor[it] ?: 0L } ?: report.grossSpendingMinor
+        val refunds = budget.categoryId?.let { report.categoryRefundsMinor[it] ?: 0L } ?: report.refundsMinor
+        return BudgetProgress(budget, expenses, refunds)
     }
 
     fun reconcile(snapshot: LedgerSnapshot, observationId: UUID): BalanceReconciliation {

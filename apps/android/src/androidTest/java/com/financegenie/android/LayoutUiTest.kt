@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -64,6 +65,11 @@ class LayoutUiTest {
         listOf("transactions", "budgets", "settings", "overview").forEach {
             compose.onNodeWithTag("tab_$it").performClick().assertIsDisplayed()
         }
+        compose.onNodeWithTag("tab_budgets").performClick()
+        compose.addBudget("5000")
+        compose.budgetNode("budget_remaining_overall").assertTextEquals("₹5,000.00")
+        capture("step5-font200-dark-budget.png", "budget_list")
+        compose.onNodeWithTag("tab_overview").performClick()
         compose.onNodeWithTag("add_transaction").performClick()
         compose.choose("field_kind", TransactionKind.ADJUSTMENT.name)
         compose.field("field_amount", "1.25")

@@ -12,11 +12,15 @@ import com.financegenie.android.data.StoredRecord
 import com.financegenie.android.data.TransactionRecord
 import com.financegenie.android.data.TransactionWrite
 import com.financegenie.android.domain.BalanceReconciliation
+import com.financegenie.android.domain.BudgetCopyPlan
+import com.financegenie.android.domain.BudgetProgress
 import com.financegenie.android.domain.LedgerAccount
 import com.financegenie.android.domain.LedgerCalculator
 import com.financegenie.android.domain.LedgerCategory
 import com.financegenie.android.domain.LedgerDates
 import com.financegenie.android.domain.LedgerReport
+import com.financegenie.android.domain.MonthlyBudget
+import com.financegenie.android.domain.planBudgetCopy
 import com.financegenie.android.domain.TransactionKind
 import com.financegenie.android.domain.UNCATEGORIZED_ID
 import java.time.Clock
@@ -54,10 +58,13 @@ data class LedgerUiState(
     val currentReport: LedgerReport? = null,
     val observations: Map<UUID, BalanceReconciliation> = emptyMap(),
     val rows: List<TransactionRecord> = emptyList(),
+    val budgets: List<BudgetRow> = emptyList(),
     @StringRes val error: Int? = null,
 )
 
 data class LedgerNotice(val id: UUID = UUID.randomUUID(), @StringRes val message: Int, val undoGroup: UUID? = null)
+data class BudgetRow(val record: StoredRecord<MonthlyBudget>, val progress: BudgetProgress)
+data class BudgetCopyConfirmation(val plan: BudgetCopyPlan, val expectedLedgerRevision: Long)
 private data class LoadResult(val ledger: StoredLedger? = null, val failed: Boolean = false)
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -96,7 +103,9 @@ class LedgerViewModel(private val repository: LedgerRepository, private val cloc
                         (search.isEmpty() || record.details.merchant.contains(search, true) || record.details.notes.contains(search, true))
                 }.sortedWith(compareByDescending<TransactionRecord> { it.transaction.effectiveDate }
                     .thenByDescending { it.metadata.createdAtMillis }.thenBy { it.transaction.id })
-                LedgerUiState(selection, false, ledger, report, current, observations, rows)
+                val budgets = ledger.budgets.filter { it.value.month == selection.month }.sortedBy { it.value.categoryId.orEmpty() }
+                    .map { BudgetRow(it, calculator.budgetProgress(it.value, report)) }
+                LedgerUiState(selection, false, ledger, report, current, observations, rows, budgets)
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 LedgerUiState(selection, loading = false, error = R.string.error_load)
@@ -114,12 +123,54 @@ class LedgerViewModel(private val repository: LedgerRepository, private val cloc
     val notice = mutableNotice.asStateFlow()
     private val mutableDelete = MutableStateFlow<List<TransactionRecord>>(emptyList())
     val deleting = mutableDelete.asStateFlow()
+    private val mutableBudgetCopy = MutableStateFlow<BudgetCopyConfirmation?>(null)
+    val budgetCopy = mutableBudgetCopy.asStateFlow()
+    private val mutableBudgetRemoval = MutableStateFlow<StoredRecord<MonthlyBudget>?>(null)
+    val budgetRemoval = mutableBudgetRemoval.asStateFlow()
+    private val mutableBudgetError = MutableStateFlow<Int?>(null)
+    val budgetError = mutableBudgetError.asStateFlow()
 
     fun retry() { reload.value += 1 }
     fun filter(change: (LedgerFilters) -> LedgerFilters) { filters.value = change(filters.value) }
     fun moveMonth(delta: Long) {
         val month = filters.value.month.plusMonths(delta)
-        if (month <= YearMonth.from(LedgerDates.today(clock))) filter { it.copy(month = month) }
+        if (month.year in 1..9999) filter { it.copy(month = month) }
+    }
+
+    fun newBudget(categoryId: String? = null) = open(BudgetDraft(UUID.randomUUID(), month = filters.value.month.toString(), categoryId = categoryId))
+    fun editBudget(record: StoredRecord<MonthlyBudget>) = open(BudgetDraft(record.value.id, record,
+        record.value.month.toString(), record.value.categoryId, inputMagnitude(record.value.limitMinor)))
+
+    fun askCopyBudgets() {
+        if (busy.value) return
+        val ledger = state.value.ledger ?: return
+        if (state.value.filters.month == YearMonth.of(9999, 12)) return
+        mutableBudgetError.value = null
+        mutableBudgetCopy.value = BudgetCopyConfirmation(planBudgetCopy(ledger.snapshot, state.value.filters.month), ledger.settings.revision)
+    }
+    fun cancelBudgetCopy() { if (!busy.value) mutableBudgetCopy.value = null }
+    fun confirmBudgetCopy() {
+        val confirmation = budgetCopy.value ?: return
+        work(budgetAction = true) {
+            repository.copyBudgetsToNextMonth(confirmation.plan.fromMonth, confirmation.expectedLedgerRevision)
+            filter { it.copy(month = confirmation.plan.toMonth) }
+            mutableBudgetCopy.value = null
+            mutableNotice.value = LedgerNotice(message = R.string.budgets_copied)
+        }
+    }
+    fun askRemoveBudget(record: StoredRecord<MonthlyBudget>) {
+        if (busy.value) return
+        mutableBudgetError.value = null
+        mutableBudgetRemoval.value = record
+    }
+    fun cancelBudgetRemoval() { if (!busy.value) mutableBudgetRemoval.value = null }
+    fun confirmBudgetRemoval() {
+        val record = budgetRemoval.value ?: return
+        work(budgetAction = true) {
+            repository.removeBudget(record.value.id, record.metadata.revision)
+            mutableBudgetRemoval.value = null
+            mutableNotice.value = LedgerNotice(message = R.string.budget_removed)
+        }
     }
 
     fun newAccount() = open(AccountDraft(UUID.randomUUID(), date = LedgerDates.today(clock).toString()))
@@ -166,6 +217,12 @@ class LedgerViewModel(private val repository: LedgerRepository, private val cloc
         val draft = editor.value ?: return
         work(form = true) {
             val notice = when (draft) {
+                is BudgetDraft -> {
+                    val budget = draft.budget()
+                    repository.saveBudget(budget, draft.original?.metadata?.revision)
+                    filter { it.copy(month = budget.month) }
+                    LedgerNotice(message = R.string.budget_saved)
+                }
                 is AccountDraft -> {
                     repository.saveAccount(draft.account(clock), draft.expectedRevision)
                     LedgerNotice(message = R.string.account_saved)
@@ -225,18 +282,23 @@ class LedgerViewModel(private val repository: LedgerRepository, private val cloc
     }
     fun consumeNotice(id: UUID) { if (notice.value?.id == id) mutableNotice.value = null }
 
-    private fun work(form: Boolean = false, action: suspend () -> Unit) {
+    private fun work(form: Boolean = false, budgetAction: Boolean = false, action: suspend () -> Unit) {
         // Set synchronously before launching: two taps in the same frame cannot enqueue two writes.
         if (mutableBusy.value) return
         mutableBusy.value = true
         mutableFormError.value = null
+        mutableBudgetError.value = null
         viewModelScope.launch {
             try {
                 action()
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 val message = errorMessage(error, editingOpening = form && editor.value is AccountDraft)
-                if (form) mutableFormError.value = message else mutableNotice.value = LedgerNotice(message = message)
+                when {
+                    form -> mutableFormError.value = message
+                    budgetAction -> mutableBudgetError.value = if (error is StaleRecordException) R.string.error_budget_changed else message
+                    else -> mutableNotice.value = LedgerNotice(message = message)
+                }
             } finally {
                 mutableBusy.value = false
             }
@@ -254,6 +316,8 @@ private fun errorMessage(error: Exception, editingOpening: Boolean): Int = when 
         "A linked refund requires a non-deleted expense", "Original expense does not exist" -> R.string.error_refund_link
         "Cannot select an archived account", "Cannot select an archived destination" -> R.string.error_archived_account
         "Cannot select an archived category" -> R.string.error_archived_category
+        "Cannot select an archived budget category" -> R.string.error_archived_category
+        "A month/category scope can have only one budget" -> R.string.error_budget_exists
         "Transaction predates account opening", "Transfer predates destination account opening" ->
             if (editingOpening) R.string.error_opening_history else R.string.error_opening_date
         "Observation must be within the recorded account lifetime" -> R.string.error_observation_date

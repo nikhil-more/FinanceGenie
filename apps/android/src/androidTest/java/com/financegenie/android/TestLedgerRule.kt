@@ -17,6 +17,7 @@ class TestLedgerRule(
     private val lockEnabled: Boolean = false,
     private val seed: suspend (LedgerRepository) -> Unit = {},
     private val decorate: (LedgerRepository) -> LedgerRepository = { it },
+    private val clock: Clock = Clock.fixed(Instant.parse("2026-11-30T12:00:00Z"), ZoneOffset.UTC),
 ) : ExternalResource() {
     private lateinit var database: FinanceGenieDatabase
     lateinit var repository: LedgerRepository
@@ -26,7 +27,6 @@ class TestLedgerRule(
     private val app get() = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as FinanceGenieApplication
 
     override fun before() {
-        val clock = Clock.fixed(Instant.parse("2026-11-30T12:00:00Z"), ZoneOffset.UTC)
         database = FinanceGenieDatabase.inMemory(app, clock)
         repository = decorate(RoomLedgerRepository(database, clock))
         val preferences = app.getSharedPreferences("ui-tests-only", Context.MODE_PRIVATE)
@@ -37,7 +37,7 @@ class TestLedgerRule(
         app.replaceTestContainer(object : AppContainer {
             override val repository = this@TestLedgerRule.repository
             override val privacy = this@TestLedgerRule.privacy
-            override val clock = clock
+            override val clock = this@TestLedgerRule.clock
         })
     }
 

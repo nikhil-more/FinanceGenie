@@ -52,6 +52,7 @@ internal suspend fun seedUiAccounts(repository: LedgerRepository) {
 
 internal typealias AppComposeRule = AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity>
 internal fun ComposeContentTestRule.waitTag(tag: String) = waitUntil(15_000) { onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }
+internal fun ComposeContentTestRule.waitNoTag(tag: String) = waitUntil(15_000) { onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isEmpty() }
 internal fun ComposeContentTestRule.field(tag: String, value: String) { onNodeWithTag(tag).performScrollTo().performTextReplacement(value) }
 internal fun ComposeContentTestRule.choose(tag: String, id: String) {
     onNodeWithTag(tag).performScrollTo().performClick()
@@ -170,12 +171,15 @@ class LedgerUiTest {
         compose.waitUntil(10_000) { runBlocking { !data.repository.read().transactions.single().transaction.isDeleted } }
         compose.dismissNotice()
         compose.field("search_transactions", "no match")
+        compose.waitNoTag("transaction_$id")
         compose.onNodeWithTag("transaction_$id").assertDoesNotExist()
         compose.field("search_transactions", "Lunch")
         compose.choose("filter_account", uiCash.toString())
+        compose.waitNoTag("transaction_$id")
         compose.onNodeWithTag("transaction_$id").assertDoesNotExist()
         compose.choose("filter_account", uiBank.toString())
         compose.choose("filter_category", "food")
+        compose.waitTag("transaction_$id")
         compose.onNodeWithTag("transaction_$id").performScrollTo().assertIsDisplayed()
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("transaction_$id").performScrollTo().assertIsDisplayed()

@@ -31,6 +31,11 @@ a form is open; stale edits must be reopened rather than silently rebased.
   historical references; there is no public hard-delete ledger operation.
 - Budget uniqueness uses `(month, scope_key)`, where scope is `overall` or
   `category:<id>`. It does not depend on SQLite's nullable-column uniqueness.
+- Budget edits keep their month/scope fixed. Removing a budget deletes only that
+  configuration row after checking its revision. `copyBudgetsToNextMonth` checks
+  the preview's ledger revision, inserts new IDs for missing active scopes in one
+  transaction, preserves existing target values and skips archived categories.
+  A failed copy rolls back all rows/revision; an empty copy changes no revision.
 - Undo preserves prior typed rows and validates the whole result. It is allowed
   only while every affected row is still at the group's accepted revision. Undo
   increments revisions; creation undo retains a tombstone, rather than deleting

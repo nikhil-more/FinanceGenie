@@ -5,8 +5,9 @@ and Material 3. Accounts, categories and manual expense/income/transfer/refund/
 adjustment entry use the tested local ledger, with search, edit, delete and undo.
 Implementation follows [plan.md](plan.md). Current status, test dependencies and
 step-by-step tradeoffs are recorded in [progress_tracker.md](progress_tracker.md).
-The Overview shows basic calculated totals. Calendar-budget management and charts
-remain Steps 5–6; the Budgets tab currently explains its empty state.
+The Overview shows basic calculated totals. The Budgets tab supports independent
+overall/category limits, month planning, explicit next-month copying and in-app
+warnings. Charts and broader analytics remain Step 6.
 
 ## Open and build
 
@@ -69,6 +70,7 @@ clean up only their own in-memory/test-named databases and preference file. They
 never clear the application's ledger or the phone's data. Device serials are
 selected privately and redacted from output; `--serial` is available for multiple phones.
 Use `--ui-only` to rerun UI checks and their restart probe independently.
+Use `--budget-ui-only` for budget UI checks plus the expense/budget restart probe.
 
 Manually check dark mode, rotation, back navigation, 200% font size and TalkBack.
 The user supplies a connected physical phone for device tests; the current
@@ -115,6 +117,7 @@ signing keys or service credentials. Use synthetic data for later tests.
 - [Threat model](docs/security-threat-model.md)
 - [Verification log](docs/verification-log.md)
 - [Local data model and write boundaries](docs/local-data.md)
+- [Calendar budgets and copy behavior](docs/budgets.md)
 - [Acceptance checklist](docs/e2e-acceptance.md)
 
 Licensed under [Apache License 2.0](LICENSE).

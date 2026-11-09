@@ -20,6 +20,7 @@ def main() -> int:
     parser.add_argument("--serial", default=os.environ.get("ANDROID_SERIAL"), help="Select a phone when several are connected; never logged")
     parser.add_argument("--ui", action="store_true", help="Also verify manual-entry UI, privacy and a fresh-process UI read")
     parser.add_argument("--ui-only", action="store_true", help="Run the UI checks without repeating the storage suite")
+    parser.add_argument("--budget-ui-only", action="store_true", help="Run budget UI checks and the UI persistence probe independently")
     args = parser.parse_args()
     apk_paths = [
         ROOT / "apps/android/build/outputs/apk/debug/android-debug.apk",
@@ -74,7 +75,7 @@ def main() -> int:
         if "Success" not in output:
             raise RuntimeError("Test APK installation was not accepted")
     count = 0
-    if not args.ui_only:
+    if not args.ui_only and not args.budget_ui_only:
         count = instrument("Storage suite", ["-e", "package", "com.financegenie.android.data.local"])
         instrument("Seed process-restart fixture", ["-e", "class", PROBE + "#a_seedPersistentLedger"])
         adb("Stop only the development app", ["shell", "am", "force-stop", APP_PACKAGE])
@@ -82,13 +83,17 @@ def main() -> int:
             "-e", "class", PROBE + "#b_verifyPersistentLedgerAndCleanUp", "-e", "requireFreshProcess", "true",
         ])
     ui_count = 0
-    if args.ui or args.ui_only:
+    if (args.ui or args.ui_only) and not args.budget_ui_only:
         classes = ["NavigationTest", "ManagementUiTest", "LedgerUiTest", "PrivacyUiTest", "LayoutUiTest", "FailureUiTest"]
         ui_count = instrument("Manual-entry and privacy UI suite", [
             "-e", "class", ",".join("com.financegenie.android." + name for name in classes),
         ])
+    if args.ui or args.ui_only or args.budget_ui_only:
+        ui_count += instrument("Calendar-budget UI suite", [
+            "-e", "class", "com.financegenie.android.BudgetUiTest,com.financegenie.android.BudgetHistoryUiTest",
+        ])
         ui_probe = "com.financegenie.android.UiRestartTest"
-        instrument("Save an expense through the UI", ["-e", "class", ui_probe + "#a_saveExpenseThroughUi"])
+        instrument("Save an expense and budget through the UI", ["-e", "class", ui_probe + "#a_saveExpenseThroughUi"])
         adb("Stop only the development app", ["shell", "am", "force-stop", APP_PACKAGE])
         instrument("Read the UI in a fresh process", [
             "-e", "class", ui_probe + "#b_readExpenseInFreshProcess", "-e", "requireFreshProcess", "true",

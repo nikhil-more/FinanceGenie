@@ -51,6 +51,9 @@ fun FinanceGenieApp(model: LedgerViewModel, privacy: PrivacyUiState, privacyMode
     val busy by model.busy.collectAsStateWithLifecycle()
     val deleting by model.deleting.collectAsStateWithLifecycle()
     val notice by model.notice.collectAsStateWithLifecycle()
+    val budgetCopy by model.budgetCopy.collectAsStateWithLifecycle()
+    val budgetRemoval by model.budgetRemoval.collectAsStateWithLifecycle()
+    val budgetError by model.budgetError.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val route = backStackEntry?.destination?.route ?: "overview"
@@ -99,7 +102,7 @@ fun FinanceGenieApp(model: LedgerViewModel, privacy: PrivacyUiState, privacyMode
         NavHost(navController, startDestination = "overview", modifier = Modifier.padding(padding)) {
             composable("overview") { LedgerContent(state, model::retry) { OverviewScreen(state, model) { navController.navigate("accounts") } } }
             composable("transactions") { LedgerContent(state, model::retry) { TransactionsScreen(state, model) } }
-            composable("budgets") { BudgetsPlaceholder() }
+            composable("budgets") { LedgerContent(state, model::retry) { BudgetsScreen(state, model, busy) } }
             composable("settings") { SettingsScreen(privacy, privacyModel, authenticate,
                 accounts = { navController.navigate("accounts") }, categories = { navController.navigate("categories") }) }
             composable("accounts") { LedgerContent(state, model::retry) { AccountsScreen(state, model) } }
@@ -116,13 +119,7 @@ fun FinanceGenieApp(model: LedgerViewModel, privacy: PrivacyUiState, privacyMode
             Text(stringResource(if (deleting.size > 1) R.string.delete_linked_action else R.string.delete))
         } },
         dismissButton = { TextButton(onClick = model::cancelDelete, enabled = !busy) { Text(stringResource(R.string.cancel)) } })
-}
-
-@Composable private fun BudgetsPlaceholder() {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.budgets_empty_title), style = MaterialTheme.typography.headlineSmall)
-        Text(stringResource(R.string.budgets_empty_description))
-    }
+    BudgetConfirmations(budgetCopy, budgetRemoval, state.ledger, budgetError, busy, model)
 }
 
 @Composable

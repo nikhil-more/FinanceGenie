@@ -32,7 +32,7 @@ architecture decisions live in [the decision record](docs/decisions.md).
 | 2 | Pure financial model and golden fixtures | PASS | 35 JVM tests, debug/test APK builds and lint pass; [fixture](fixtures/ledger/november-baseline.json), [verification](docs/verification-log.md#step-2--pure-financial-model-and-golden-fixtures--2026-11-09) | Below |
 | 3 | Room persistence and atomic operations | PASS | 17 phone storage tests plus fresh-process probe; 35 JVM tests, debug/release/test builds and lint pass | Below |
 | 4 | Accounts, manual transactions and navigation | PASS | 45 JVM tests, 12 phone UI tests, restart probes and user-confirmed lock/preview/TalkBack checks pass | Below |
-| 5 | Calendar budgets | NOT STARTED | After Step 4 | Record when started |
+| 5 | Calendar budgets | PASS | 55 JVM tests, 23 phone storage tests, 17 UI tests and expense/budget restart probe pass; schema unchanged | Below |
 | 6 | Offline overview and analytics | NOT STARTED | After Step 5 | Record when started |
 | 7 | CSV preview/import/undo | NOT STARTED | After Step 6 | Record when started |
 | 8 | Backup, restore, export and local deletion | NOT STARTED | After Step 7 | Record when started |
@@ -177,8 +177,37 @@ architecture decisions live in [the decision record](docs/decisions.md).
   background timeout, protected screenshots/recent-app previews, and usable
   TalkBack labels/controls on the A063. Step 4 acceptance is complete.
 
+### Step 5 — Explicit calendar-month limits
+
+- **Decision:** Reuse exact ledger reports for separate overall/category
+  limits, including expenses/refunds/net/remaining. Allow planning future months
+  through the shared month selector. A zero limit is a real budget; removing a
+  limit returns its scope to no-budget state.
+- **Copy policy:** Confirm an atomic next-month copy, create new IDs, preserve
+  existing target limits and skip archived categories. Preview counts and reject
+  a changed ledger revision rather than copying different values silently.
+- **Alternative:** Automatically roll limits forward, replace destination values,
+  or treat category limits as allocations of the overall cap.
+- **Reason:** Keep historical months independent and make every write explicit.
+- **Consequence:** Budget removal deletes configuration only, with a revision check;
+  financial events/history stay intact. Room schema remains v1. In-app text warnings
+  start at 80%, distinguish reaching/exceeding a limit, and require no notification
+  permission. There is no rollover or background alert scheduling.
+- **Revisit:** Actual sync tombstones/schema needs in C, user feedback on warnings,
+  and measured query/render performance in Step 6.
+- **Verification:** 55 JVM tests, 23 phone storage tests, five budget UI journeys
+  and 12 navigation/transaction/privacy/layout regression tests pass. Separate
+  save/force-stop/read invocations verify a ₹500 limit and ₹300.50 remaining against
+  a persisted ₹199.50 expense in a new reader process. The 200% dark budget capture
+  was visually inspected; debug/release/test builds and lint pass with no schema
+  change or new permission. [Evidence](docs/verification-log.md#step-5--calendar-budgets--2026-11-09).
+- **Test synchronization:** Existing filter assertions now wait for the expected
+  asynchronous result. Lock tests verify visible navigation and explicitly choose
+  Overview after unlocking instead of assuming a restored destination. Expected
+  financial/session results are unchanged, and no test is skipped.
+
 ## Current actions and outstanding checks
 
-1. Next implementation step: calendar budgets (Step 5).
+1. Next implementation step: offline overview and analytics (Step 6).
 2. Device-backup behavior remains a later Gate A check; never commit a full phone
    log or personal screenshot.
