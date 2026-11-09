@@ -31,7 +31,7 @@ architecture decisions live in [the decision record](docs/decisions.md).
 | 1 | Android project and checks | PASS | Builds/lint, two physical-phone navigation tests, launch and user readability/tab confirmation pass | Below |
 | 2 | Pure financial model and golden fixtures | PASS | 35 JVM tests, debug/test APK builds and lint pass; [fixture](fixtures/ledger/november-baseline.json), [verification](docs/verification-log.md#step-2--pure-financial-model-and-golden-fixtures--2026-11-09) | Below |
 | 3 | Room persistence and atomic operations | PASS | 17 phone storage tests plus fresh-process probe; 35 JVM tests, debug/release/test builds and lint pass | Below |
-| 4 | Accounts, manual transactions and navigation | IN PROGRESS | Implementation and automated checks pass; await manual credential/preview/TalkBack confirmation | Below |
+| 4 | Accounts, manual transactions and navigation | PASS | 45 JVM tests, 12 phone UI tests, restart probes and user-confirmed lock/preview/TalkBack checks pass | Below |
 | 5 | Calendar budgets | NOT STARTED | After Step 4 | Record when started |
 | 6 | Offline overview and analytics | NOT STARTED | After Step 5 | Record when started |
 | 7 | CSV preview/import/undo | NOT STARTED | After Step 6 | Record when started |
@@ -172,12 +172,13 @@ architecture decisions live in [the decision record](docs/decisions.md).
   issues. All 12 UI tests passed on the A063, plus separate save/restart/read
   invocations enforcing a new reader process. The 17 storage tests and their
   two-stage probe also passed during this step. Compose-local 200% font/dark/light
-  interactions passed and synthetic captures were visually inspected. Real system
-  authentication, cancellation, recents and TalkBack still require user confirmation.
+  interactions passed and synthetic captures were visually inspected. The user
+  confirmed successful real device-credential enable/unlock/cancel and the 30-second
+  background timeout, protected screenshots/recent-app previews, and usable
+  TalkBack labels/controls on the A063. Step 4 acceptance is complete.
 
 ## Current actions and outstanding checks
 
-1. Obtain the user's real system-authentication/preview/TalkBack results on the phone;
-   keep Step 4 IN PROGRESS until those mandatory checks are confirmed.
-2. Begin calendar budgets (Step 5) after Step 4 acceptance. Device-backup behavior
-   remains a later Gate A check; never commit a full phone log or personal screenshot.
+1. Next implementation step: calendar budgets (Step 5).
+2. Device-backup behavior remains a later Gate A check; never commit a full phone
+   log or personal screenshot.

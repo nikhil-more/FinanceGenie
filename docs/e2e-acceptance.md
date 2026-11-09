@@ -25,10 +25,12 @@ Step 4 automated acceptance on the connected A063 is recorded in the verificatio
 - [x] Committed UI data survives a separately verified process restart.
 - [x] Load error/retry; financial semantics hidden by the lock gate; live secure flags.
 - [x] Compose-local 200% font/dark-mode interactions and normal-font light rendering.
-- [ ] Real Android credential enable/unlock/cancel and background timeout.
-- [ ] OEM screenshot/recent-app behavior and actual TalkBack interaction.
+- [x] Real Android credential enable/unlock/cancel and 30-second background timeout;
+  user confirmed on 9 November 2026.
+- [x] Screenshot/recent-app protection and actual TalkBack interaction; user
+  confirmed on the A063 on 9 November 2026.
 
-Unrun mandatory checks remain pending. Step 4 is IN PROGRESS until the user's
-manual privacy/accessibility results are confirmed. Do not mark Gate A complete:
+Step 4 is PASS with automated evidence and the user's manual phone confirmations.
+Do not mark Gate A complete:
 budgets, charts/performance, imports, recovery and actual OS backup behavior still
 have their later gates. Recovery is required before using real personal finances.

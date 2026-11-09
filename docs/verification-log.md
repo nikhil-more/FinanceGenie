@@ -344,12 +344,14 @@ are maintained in [progress_tracker.md](../progress_tracker.md).
   `/tmp/financegenie-step4-phone-ui-final.log`, JVM/lint reports and repository
   test/driver sources. These results were collected locally; remote CI was not
   part of this verification run.
-- **Mandatory manual checks:** NOT YET CONFIRMED — real Android device-credential
-  enable/unlock/cancel and background timeout; screenshot/recent-app OEM behavior;
-  TalkBack spoken labels, focus and actions. The updated app is installed/open on
-  the user's phone, and these checks have been requested explicitly. Only the user
-  enters a credential or changes global accessibility settings.
-- **Status:** Implementation/automated checks PASS; Step 4 overall IN PROGRESS
-  pending those manual results. Gate A is not passed. Calendar-budget management,
+- **Mandatory manual checks:** PASS — the user explicitly confirmed both requested
+  check groups on 9 November 2026: real Android device-credential enablement,
+  Lock now, cancelled authentication staying protected, successful unlock and
+  returning after 30 seconds requiring authentication; protected screenshots/
+  recent-app previews and usable TalkBack labels/controls across tabs and a form.
+  These results are user-reported on the A063, separate from automated policy
+  tests. Only the user entered the credential or changed accessibility settings.
+- **Status:** Step 4 PASS, including automated and manual acceptance. Gate A is
+  not passed. Calendar-budget management,
   charts/performance, portable recovery and actual backup behavior retain their
   later planned gates.

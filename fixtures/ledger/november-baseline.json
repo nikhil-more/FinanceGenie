@@ -1,0 +1,51 @@
+{
+    "schemaVersion": 1,
+    "description": "Synthetic accounting contract fixture; never real financial data",
+    "currency": "INR",
+    "reportingZone": "Asia/Kolkata",
+    "clockInstant": "2026-12-31T12:00:00Z",
+    "reportMonth": "2026-11",
+    "accounts": [
+        { "id": "00000000-0000-0000-0000-000000000001", "name": "Synthetic Bank", "kind": "BANK", "openingDate": "2026-11-01", "openingBalanceMinor": "0" },
+        { "id": "00000000-0000-0000-0000-000000000002", "name": "Synthetic Cash", "kind": "CASH", "openingDate": "2026-11-01", "openingBalanceMinor": "0" },
+        { "id": "00000000-0000-0000-0000-000000000003", "name": "Synthetic Card", "kind": "CREDIT_CARD", "openingDate": "2026-11-01", "openingBalanceMinor": "0" }
+    ],
+    "categories": [
+        { "id": "uncategorized", "name": "Uncategorized" },
+        { "id": "groceries", "name": "Groceries" },
+        { "id": "shopping", "name": "Shopping" }
+    ],
+    "transactions": [
+        { "id": "00000000-0000-0000-0000-000000000101", "kind": "INCOME", "amountMinor": "6000000", "accountId": "00000000-0000-0000-0000-000000000001", "effectiveDate": "2026-11-01" },
+        { "id": "00000000-0000-0000-0000-000000000102", "kind": "EXPENSE", "amountMinor": "225075", "accountId": "00000000-0000-0000-0000-000000000001", "effectiveDate": "2026-11-02", "categoryId": "groceries" },
+        { "id": "00000000-0000-0000-0000-000000000103", "kind": "REFUND", "amountMinor": "25075", "accountId": "00000000-0000-0000-0000-000000000001", "effectiveDate": "2026-11-03", "categoryId": "groceries", "originalExpenseId": "00000000-0000-0000-0000-000000000102" },
+        { "id": "00000000-0000-0000-0000-000000000104", "kind": "TRANSFER", "amountMinor": "100000", "accountId": "00000000-0000-0000-0000-000000000001", "destinationAccountId": "00000000-0000-0000-0000-000000000002", "effectiveDate": "2026-11-04" },
+        { "id": "00000000-0000-0000-0000-000000000105", "kind": "EXPENSE", "amountMinor": "149900", "accountId": "00000000-0000-0000-0000-000000000003", "effectiveDate": "2026-11-05", "categoryId": "shopping" },
+        { "id": "00000000-0000-0000-0000-000000000106", "kind": "TRANSFER", "amountMinor": "149900", "accountId": "00000000-0000-0000-0000-000000000001", "destinationAccountId": "00000000-0000-0000-0000-000000000003", "effectiveDate": "2026-11-06" }
+    ],
+    "budgets": [
+        { "id": "00000000-0000-0000-0000-000000000201", "month": "2026-11", "limitMinor": "500000", "categoryId": "groceries" },
+        { "id": "00000000-0000-0000-0000-000000000202", "month": "2026-11", "limitMinor": "500000" }
+    ],
+    "expected": {
+        "grossSpendingMinor": "374975",
+        "refundsMinor": "25075",
+        "netSpendingMinor": "349900",
+        "incomeMinor": "6000000",
+        "recordedSurplusMinor": "5650100",
+        "adjustmentsMinor": "0",
+        "totalTrackedPositionMinor": "5650100",
+        "accountPositionsMinor": {
+            "00000000-0000-0000-0000-000000000001": "5550100",
+            "00000000-0000-0000-0000-000000000002": "100000",
+            "00000000-0000-0000-0000-000000000003": "0"
+        },
+        "categoryNetSpendingMinor": { "groceries": "200000", "shopping": "149900" },
+        "dailyNetSpendingMinor": { "2026-11-02": "225075", "2026-11-03": "-25075", "2026-11-05": "149900" },
+        "monthlyNetSpendingMinor": { "2026-11": "349900" },
+        "budgetRemainingMinor": {
+            "00000000-0000-0000-0000-000000000201": "300000",
+            "00000000-0000-0000-0000-000000000202": "150100"
+        }
+    }
+}

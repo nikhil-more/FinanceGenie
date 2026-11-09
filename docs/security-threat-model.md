@@ -8,8 +8,8 @@ notes and privacy preferences are sensitive assets governed by [plan.md](../plan
 | Secrets or personal records in source | Synthetic content, ignore private config/signing files, limited credential-pattern guard | Comprehensive secret review before release |
 | Unintended collection/network access | No bank/cloud/analytics integrations or sensitive permissions | Inspect merged/packaged release permissions after build |
 | OS backup or device-transfer exposure | `allowBackup=false` plus explicit legacy and modern exclusions | Test actual supported-device behavior |
-| Shared or lost unlocked device | Optional system device-credential app lock; cold-start gate and configurable background timeout | Real credential/cancellation/recents phone checks recorded separately; no database-encryption claim |
-| Screenshots and recent-app previews | Default `FLAG_SECURE`, inherited by dialogs; immediate lock shield while backgrounded and recents restriction on API 33+ | Verify OEM behavior manually; foreground screen sharing can be explicitly enabled |
+| Shared or lost unlocked device | Optional system device-credential app lock; cold-start gate and configurable background timeout | User confirmed device credential, cancellation and timeout on A063; no database-encryption claim |
+| Screenshots and recent-app previews | Default `FLAG_SECURE`, inherited by dialogs; immediate lock shield while backgrounded and recents restriction on API 33+ | User confirmed screenshot/preview protection on A063; recheck other supported devices; foreground sharing can be explicitly enabled |
 | Crash/partial local financial writes | Room atomic groups, revision checks, persistent soft deletion and undo; phone storage/restart tests | Tested portable backup/restore in Step 8 |
 | Financial content exposed by a locked screen | Remove the financial composition while gated; unlock grants remain in memory only | Keep lifecycle/semantics tests and physical system-auth checks |
 | Malicious import/notification text | No ingestion capability in the scaffold | Bounded parsing, no executable markup/raw message storage later |

@@ -6,7 +6,7 @@ and acceptance specification; this document records the scope being started.
 The user has started milestone A implementation and requested a maintained
 `progress_tracker.md` covering verification and tradeoffs at every step. The
 foundation, financial model, Room storage and manual-management screens are
-implemented; manual Step 4 privacy/accessibility acceptance is pending. The app
+implemented; Step 4 automated and manual phone acceptance has passed. The app
 starts without sign-in, payment credentials or sensitive
 permissions. Initial currency is INR, reporting zone Asia/Kolkata, minimum Android
 API 26. The user provides a physical phone for testing; the current reference is
