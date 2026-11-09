@@ -151,7 +151,13 @@ class LedgerUiTest {
         compose.onNodeWithTag("tab_transactions").performClick()
         compose.onNodeWithTag("edit_$id").performScrollTo().performClick()
         compose.field("field_amount", "199.50")
+        compose.onNodeWithTag("field_amount").assertTextContains("199.50")
+        compose.runOnUiThread {
+            val draft = androidx.lifecycle.ViewModelProvider(compose.activity)[LedgerViewModel::class.java].editor.value
+            assertEquals("199.50", (draft as com.financegenie.android.ui.TransactionDraft).amount)
+        }
         compose.activityRule.scenario.recreate()
+        compose.waitTag("ledger_form")
         compose.onNodeWithTag("field_amount").assertTextContains("199.50")
         compose.saveForm()
         assertEquals(19_950L, runBlocking { data.repository.read().transactions.single().transaction.amountMinor })

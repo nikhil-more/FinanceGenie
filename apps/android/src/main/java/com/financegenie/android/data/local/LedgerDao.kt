@@ -3,7 +3,9 @@ package com.financegenie.android.data.local
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.RawQuery
 import androidx.room.Update
+import androidx.sqlite.db.SupportSQLiteQuery
 import java.time.LocalDate
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
@@ -11,6 +13,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 internal interface LedgerDao {
     @Query("SELECT * FROM ledger_settings WHERE id = 1") suspend fun settings(): SettingsEntity
+    @Query("SELECT total_changes()") suspend fun connectionChanges(): Long
+    @RawQuery suspend fun dataVersion(query: SupportSQLiteQuery): Long
     @Query("SELECT revision FROM ledger_settings WHERE id = 1") fun observeRevision(): Flow<Long>
     @Query("UPDATE ledger_settings SET revision = :revision WHERE id = 1") suspend fun setRevision(revision: Long)
     @Query("SELECT * FROM accounts ORDER BY id") suspend fun accounts(): List<AccountEntity>

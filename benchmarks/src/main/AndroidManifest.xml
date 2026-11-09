@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="com.financegenie.android.benchmark.permission.PREPARE_FIXTURE" />
+    <queries>
+        <package android:name="com.financegenie.android.benchmark" />
+    </queries>
+    <application android:label="FinanceGenie benchmark driver" />
+</manifest>

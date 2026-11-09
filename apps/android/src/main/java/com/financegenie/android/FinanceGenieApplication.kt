@@ -15,10 +15,10 @@ interface AppContainer {
     val clock: Clock
 }
 
-class FinanceGenieApplication : Application() {
+open class FinanceGenieApplication : Application() {
     private val productionContainer: AppContainer by lazy { LocalAppContainer(this) }
     private var testContainer: AppContainer? = null
-    val container: AppContainer get() = testContainer ?: productionContainer
+    open val container: AppContainer get() = testContainer ?: productionContainer
 
     internal fun replaceTestContainer(value: AppContainer?) {
         check(applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) { "Test replacement requires a debug build" }

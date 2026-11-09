@@ -21,6 +21,7 @@ def main() -> int:
     parser.add_argument("--ui", action="store_true", help="Also verify manual-entry UI, privacy and a fresh-process UI read")
     parser.add_argument("--ui-only", action="store_true", help="Run the UI checks without repeating the storage suite")
     parser.add_argument("--budget-ui-only", action="store_true", help="Run budget UI checks and the UI persistence probe independently")
+    parser.add_argument("--analytics-ui-only", action="store_true", help="Run analytics UI checks independently")
     args = parser.parse_args()
     apk_paths = [
         ROOT / "apps/android/build/outputs/apk/debug/android-debug.apk",
@@ -75,20 +76,22 @@ def main() -> int:
         if "Success" not in output:
             raise RuntimeError("Test APK installation was not accepted")
     count = 0
-    if not args.ui_only and not args.budget_ui_only:
+    fresh_process_checks = 0
+    if not args.ui_only and not args.budget_ui_only and not args.analytics_ui_only:
         count = instrument("Storage suite", ["-e", "package", "com.financegenie.android.data.local"])
         instrument("Seed process-restart fixture", ["-e", "class", PROBE + "#a_seedPersistentLedger"])
         adb("Stop only the development app", ["shell", "am", "force-stop", APP_PACKAGE])
         instrument("Verify fixture in a fresh process", [
             "-e", "class", PROBE + "#b_verifyPersistentLedgerAndCleanUp", "-e", "requireFreshProcess", "true",
         ])
+        fresh_process_checks += 1
     ui_count = 0
-    if (args.ui or args.ui_only) and not args.budget_ui_only:
+    if (args.ui or args.ui_only) and not args.budget_ui_only and not args.analytics_ui_only:
         classes = ["NavigationTest", "ManagementUiTest", "LedgerUiTest", "PrivacyUiTest", "LayoutUiTest", "FailureUiTest"]
         ui_count = instrument("Manual-entry and privacy UI suite", [
             "-e", "class", ",".join("com.financegenie.android." + name for name in classes),
         ])
-    if args.ui or args.ui_only or args.budget_ui_only:
+    if (args.ui or args.ui_only or args.budget_ui_only) and not args.analytics_ui_only:
         ui_count += instrument("Calendar-budget UI suite", [
             "-e", "class", "com.financegenie.android.BudgetUiTest,com.financegenie.android.BudgetHistoryUiTest",
         ])
@@ -98,10 +101,15 @@ def main() -> int:
         instrument("Read the UI in a fresh process", [
             "-e", "class", ui_probe + "#b_readExpenseInFreshProcess", "-e", "requireFreshProcess", "true",
         ])
+        fresh_process_checks += 1
+    if args.ui or args.ui_only or args.analytics_ui_only:
+        ui_count += instrument("Scoped analytics UI suite", [
+            "-e", "class", "com.financegenie.android.AnalyticsUiTest,com.financegenie.android.AnalyticsScaleUiTest,com.financegenie.android.AnalyticsSingleUiTest",
+        ])
     output = adb("Launch FinanceGenie", ["shell", "am", "start", "-W", "-n", APP_PACKAGE + "/com.financegenie.android.MainActivity"])
     if "Status: ok" not in output:
         raise RuntimeError("Development app launch did not succeed")
-    print(f"PASS: {count} storage tests, {ui_count} optional UI tests, fresh-process probes, and app launch", flush=True)
+    print(f"PASS: {count} storage tests, {ui_count} UI tests, {fresh_process_checks} fresh-process checks, and app launch", flush=True)
     return 0
 
 

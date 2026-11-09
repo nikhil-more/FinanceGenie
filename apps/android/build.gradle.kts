@@ -27,7 +27,17 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-dev"
         }
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".benchmark"
+            versionNameSuffix = "-benchmark"
+            isDebuggable = false
+            matchingFallbacks += listOf("release")
+        }
     }
+
+    testBuildType = providers.gradleProperty("financegenieTestBuildType").getOrElse("debug")
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -54,6 +64,7 @@ android {
     }
 
     sourceSets.getByName("androidTest").assets.srcDir(rootProject.file("fixtures/ledger"))
+    if (testBuildType == "benchmark") sourceSets.getByName("androidTest").java.srcDir("src/benchmarkTest/java")
 }
 
 kotlin {
@@ -92,4 +103,5 @@ dependencies {
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.espresso)
+    "benchmarkImplementation"(libs.androidx.profileinstaller)
 }

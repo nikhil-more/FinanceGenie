@@ -30,7 +30,13 @@ import org.junit.Rule
 import org.junit.Test
 
 class LayoutUiTest {
-    @get:Rule(order = 0) val data = TestLedgerRule(seed = ::seedUiAccounts)
+    @get:Rule(order = 0) val data = TestLedgerRule(seed = { repository ->
+        seedUiAccounts(repository)
+        val expense = com.financegenie.android.data.local.storageExpense(amount = 10_000)
+        val refund = expense.copy(id = java.util.UUID(0, 101), kind = TransactionKind.REFUND, categoryId = "shopping", unlinkedRefundConfirmed = true)
+        repository.applyTransactions(listOf(expense, refund).map { com.financegenie.android.data.TransactionWrite(it) })
+        repository.saveCategory(com.financegenie.android.domain.LedgerCategory("food", "Long synthetic category name for large-font accessibility and wrapping", true), 1)
+    })
     @get:Rule(order = 1) val compose = createComposeRule()
     private val store = ViewModelStore()
 
@@ -65,6 +71,8 @@ class LayoutUiTest {
         listOf("transactions", "budgets", "settings", "overview").forEach {
             compose.onNodeWithTag("tab_$it").performClick().assertIsDisplayed()
         }
+        compose.analyticsValue("category_value_shopping", "-₹100.00")
+        capture("step6-font200-dark-analytics.png", "overview_list")
         compose.onNodeWithTag("tab_budgets").performClick()
         compose.addBudget("5000")
         compose.budgetNode("budget_remaining_overall").assertTextEquals("₹5,000.00")

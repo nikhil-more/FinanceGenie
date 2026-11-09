@@ -63,6 +63,24 @@ class GoldenFixtureTest {
         }
     }
 
+    @Test fun sharedFixtureMatchesAnalyticsAndScopedAccountViews() {
+        val snapshot = snapshot()
+        val window = AnalyticsWindow.forSelection(snapshot, month, false, LocalDate.of(2026, 12, 31))
+        val reports = calculator.reports(snapshot, listOf(window.period, window.daily, window.monthly).map { ReportRequest(it) })
+        val analytics = buildAnalytics(snapshot, reports[0], reports[1], reports[2])
+        assertEquals(349_900L, analytics.report.netSpendingMinor)
+        assertEquals(mapOf("groceries" to 200_000L, "shopping" to 149_900L), analytics.categories.associate { it.category.id to it.netSpendingMinor })
+        assertEquals(-25_075L, analytics.days.single { it.date == LocalDate.of(2026, 11, 3) }.netSpendingMinor)
+        assertEquals(349_900L, analytics.months.last().netSpendingMinor)
+        val bank = calculator.report(snapshot, window.period, TransactionSelection(accountId = UUID(0, 1)))
+        val card = calculator.report(snapshot, window.period, TransactionSelection(accountId = UUID(0, 3)))
+        assertEquals(200_000L, bank.netSpendingMinor)
+        assertEquals(149_900L, card.netSpendingMinor)
+        assertEquals(6_000_000L, bank.incomeMinor)
+        assertEquals(0L, card.incomeMinor)
+        assertEquals(bank.accountPositionsMinor, card.accountPositionsMinor)
+    }
+
     private fun snapshot(): LedgerSnapshot = LedgerSnapshot(
         accounts = fixture.getAsJsonArray("accounts").map { element ->
             val row = element.asJsonObject

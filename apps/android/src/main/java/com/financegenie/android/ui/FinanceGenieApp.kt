@@ -26,6 +26,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.activity.compose.ReportDrawnWhen
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -42,7 +45,7 @@ import com.financegenie.android.privacy.PrivacyUiState
 import com.financegenie.android.privacy.PrivacyViewModel
 import com.financegenie.android.ui.navigation.TopLevelDestination
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun FinanceGenieApp(model: LedgerViewModel, privacy: PrivacyUiState, privacyModel: PrivacyViewModel, authenticate: (Boolean) -> Unit) {
     val state by model.state.collectAsStateWithLifecycle()
@@ -54,6 +57,7 @@ fun FinanceGenieApp(model: LedgerViewModel, privacy: PrivacyUiState, privacyMode
     val budgetCopy by model.budgetCopy.collectAsStateWithLifecycle()
     val budgetRemoval by model.budgetRemoval.collectAsStateWithLifecycle()
     val budgetError by model.budgetError.collectAsStateWithLifecycle()
+    ReportDrawnWhen { !state.loading && state.ledger != null }
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val route = backStackEntry?.destination?.route ?: "overview"
@@ -70,6 +74,7 @@ fun FinanceGenieApp(model: LedgerViewModel, privacy: PrivacyUiState, privacyMode
         }
     }
     Scaffold(
+        modifier = Modifier.semantics { testTagsAsResourceId = true },
         topBar = { TopAppBar(title = { Text(stringResource(when (route) {
             "accounts" -> R.string.manage_accounts
             "categories" -> R.string.manage_categories
@@ -100,7 +105,8 @@ fun FinanceGenieApp(model: LedgerViewModel, privacy: PrivacyUiState, privacyMode
         snackbarHost = { SnackbarHost(snackbars, modifier = Modifier.testTag("ledger_snackbar")) },
     ) { padding ->
         NavHost(navController, startDestination = "overview", modifier = Modifier.padding(padding)) {
-            composable("overview") { LedgerContent(state, model::retry) { OverviewScreen(state, model) { navController.navigate("accounts") } } }
+            composable("overview") { LedgerContent(state, model::retry) { OverviewScreen(state, model,
+                accounts = { navController.navigate("accounts") }, transactions = { navController.navigate("transactions") }) } }
             composable("transactions") { LedgerContent(state, model::retry) { TransactionsScreen(state, model) } }
             composable("budgets") { LedgerContent(state, model::retry) { BudgetsScreen(state, model, busy) } }
             composable("settings") { SettingsScreen(privacy, privacyModel, authenticate,
@@ -124,6 +130,7 @@ fun FinanceGenieApp(model: LedgerViewModel, privacy: PrivacyUiState, privacyMode
 
 @Composable
 fun LockedScreen(state: PrivacyUiState, unlock: () -> Unit) {
+    ReportDrawnWhen { !state.authenticating }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 64.dp).testTag("locked_screen"),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(stringResource(R.string.unlock_title), style = MaterialTheme.typography.headlineMedium)

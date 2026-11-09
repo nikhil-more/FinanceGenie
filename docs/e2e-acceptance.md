@@ -49,6 +49,27 @@ Step 5 acceptance on the same phone:
 
 Step 5 is PASS. Budget-specific human TalkBack review belongs in the full-app
 accessibility walkthrough at Gate A; it is not claimed by the automated layout test.
-Do not mark Gate A complete:
-charts/performance, imports, recovery and actual OS backup behavior still
-have their later gates. Recovery is required before using real personal finances.
+
+Step 6 correctness acceptance on the same phone:
+
+- [x] Golden metrics agree across summary, signed categories, daily/monthly values
+  and recent matching activity, including refunds and edit/delete convergence.
+- [x] Account/category/literal search and month/all-date filters are shared with
+  Transactions. Transfers match either account without becoming spending/income.
+- [x] Full-month budgets and current estimated positions retain their explicit
+  full-ledger scope when activity is filtered.
+- [x] Empty/single/1,000-row cases, negative categories, long archived labels,
+  200% dark layout and exact text alternatives pass.
+- [x] Revision cache retains committed consistency across other repositories,
+  nested rollbacks, dispatcher changes and a separate DB connection.
+- [x] Final 20-launch/30-operation baseline recorded with artifact hashes and method.
+- [ ] Startup confirmation ≤2s: observed 2.28s P95 including automation overhead.
+  Standard AndroidX TTID/TTFD is still incomplete at 14/20 and remains open for Gate A.
+
+Step 6's analytics/baseline gate is PASS. Performance target outcomes are separate
+from completion of the baseline; see
+[the measurements](performance.md) and [verification](verification-log.md).
+Budget-save timing and human analytics-specific TalkBack review remain Gate A
+checks. Do not mark Gate A complete: imports, recovery, performance hardening,
+full-app accessibility and actual OS backup behavior retain their later checks.
+Recovery is required before using real personal finances.

@@ -5,9 +5,11 @@ and Material 3. Accounts, categories and manual expense/income/transfer/refund/
 adjustment entry use the tested local ledger, with search, edit, delete and undo.
 Implementation follows [plan.md](plan.md). Current status, test dependencies and
 step-by-step tradeoffs are recorded in [progress_tracker.md](progress_tracker.md).
-The Overview shows basic calculated totals. The Budgets tab supports independent
+The Overview shows scoped totals, signed category/daily/monthly charts with exact
+text alternatives and recent matching activity. Its filters are shared with
+Transactions. The Budgets tab supports independent
 overall/category limits, month planning, explicit next-month copying and in-app
-warnings. Charts and broader analytics remain Step 6.
+warnings, always against the full calendar month.
 
 ## Open and build
 
@@ -71,6 +73,9 @@ never clear the application's ledger or the phone's data. Device serials are
 selected privately and redacted from output; `--serial` is available for multiple phones.
 Use `--ui-only` to rerun UI checks and their restart probe independently.
 Use `--budget-ui-only` for budget UI checks plus the expense/budget restart probe.
+Use `--analytics-ui-only` for the golden/filter/edit and empty/single/1,000-row
+analytics checks. For the isolated 10,000-record physical-phone performance setup,
+see [the benchmark guide](docs/performance.md).
 
 Manually check dark mode, rotation, back navigation, 200% font size and TalkBack.
 The user supplies a connected physical phone for device tests; the current
@@ -118,6 +123,8 @@ signing keys or service credentials. Use synthetic data for later tests.
 - [Verification log](docs/verification-log.md)
 - [Local data model and write boundaries](docs/local-data.md)
 - [Calendar budgets and copy behavior](docs/budgets.md)
+- [Offline Overview, charts and filter scope](docs/analytics.md)
+- [Performance methodology and reproduction](docs/performance.md)
 - [Acceptance checklist](docs/e2e-acceptance.md)
 
 Licensed under [Apache License 2.0](LICENSE).

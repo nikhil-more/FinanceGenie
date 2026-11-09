@@ -12,6 +12,12 @@ import com.financegenie.android.data.StoredRecord
 import com.financegenie.android.data.TransactionRecord
 import com.financegenie.android.data.TransactionWrite
 import com.financegenie.android.domain.BalanceReconciliation
+import com.financegenie.android.domain.AnalyticsWindow
+import com.financegenie.android.domain.DateRange
+import com.financegenie.android.domain.LedgerAnalytics
+import com.financegenie.android.domain.ReportRequest
+import com.financegenie.android.domain.TransactionSelection
+import com.financegenie.android.domain.buildAnalytics
 import com.financegenie.android.domain.BudgetCopyPlan
 import com.financegenie.android.domain.BudgetProgress
 import com.financegenie.android.domain.LedgerAccount
@@ -59,6 +65,7 @@ data class LedgerUiState(
     val observations: Map<UUID, BalanceReconciliation> = emptyMap(),
     val rows: List<TransactionRecord> = emptyList(),
     val budgets: List<BudgetRow> = emptyList(),
+    val analytics: LedgerAnalytics? = null,
     @StringRes val error: Int? = null,
 )
 
@@ -86,26 +93,37 @@ class LedgerViewModel(private val repository: LedgerRepository, private val cloc
             result.failed -> LedgerUiState(selection, loading = false, error = R.string.error_load)
             ledger == null -> LedgerUiState(selection)
             else -> try {
-                val report = calculator.monthlyReport(ledger.snapshot, selection.month)
-                val currentMonth = YearMonth.from(LedgerDates.today(clock))
-                val current = if (selection.month == currentMonth) report else calculator.monthlyReport(ledger.snapshot, currentMonth)
+                val snapshot = ledger.snapshot
+                val today = LedgerDates.today(clock)
+                val search = selection.search.trim()
+                val scope = TransactionSelection(selection.accountId, selection.categoryId,
+                    if (search.isEmpty()) null else ledger.transactions.filter {
+                        it.details.merchant.contains(search, true) || it.details.notes.contains(search, true)
+                    }.map { it.transaction.id }.toSet())
+                val window = AnalyticsWindow.forSelection(snapshot, selection.month, selection.allDates, today)
+                val fullMonth = ReportRequest(DateRange.month(selection.month))
+                val currentMonth = ReportRequest(DateRange.month(YearMonth.from(today)))
+                val scoped = ReportRequest(window.period, scope)
+                val daily = ReportRequest(window.daily, scope)
+                val monthly = ReportRequest(window.monthly, scope)
+                val requests = listOf(fullMonth, currentMonth, scoped, daily, monthly).distinct()
+                val reports = requests.zip(calculator.reports(snapshot, requests)).toMap()
+                val report = reports.getValue(fullMonth)
+                val current = reports.getValue(currentMonth)
+                val analytics = buildAnalytics(snapshot, reports.getValue(scoped), reports.getValue(daily), reports.getValue(monthly))
                 val observations = ledger.observations.groupBy { it.value.accountId }.mapValues { (_, entries) ->
                     val latest = entries.maxWith(compareBy({ it.value.asOfDate }, { it.metadata.createdAtMillis }, { it.value.id }))
                     calculator.reconcile(ledger.snapshot, latest.value.id)
                 }
-                val search = selection.search.trim()
                 val rows = ledger.transactions.filter { record ->
                     val event = record.transaction
                     (selection.showDeleted || !event.isDeleted) &&
-                        (selection.allDates || YearMonth.from(event.effectiveDate) == selection.month) &&
-                        (selection.accountId == null || event.accountId == selection.accountId || event.destinationAccountId == selection.accountId) &&
-                        (selection.categoryId == null || event.categoryId == selection.categoryId) &&
-                        (search.isEmpty() || record.details.merchant.contains(search, true) || record.details.notes.contains(search, true))
+                        (selection.allDates || event.effectiveDate in window.period) && scope.includes(event)
                 }.sortedWith(compareByDescending<TransactionRecord> { it.transaction.effectiveDate }
                     .thenByDescending { it.metadata.createdAtMillis }.thenBy { it.transaction.id })
                 val budgets = ledger.budgets.filter { it.value.month == selection.month }.sortedBy { it.value.categoryId.orEmpty() }
                     .map { BudgetRow(it, calculator.budgetProgress(it.value, report)) }
-                LedgerUiState(selection, false, ledger, report, current, observations, rows, budgets)
+                LedgerUiState(selection, false, ledger, report, current, observations, rows, budgets, analytics)
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 LedgerUiState(selection, loading = false, error = R.string.error_load)
@@ -131,10 +149,12 @@ class LedgerViewModel(private val repository: LedgerRepository, private val cloc
     val budgetError = mutableBudgetError.asStateFlow()
 
     fun retry() { reload.value += 1 }
-    fun filter(change: (LedgerFilters) -> LedgerFilters) { filters.value = change(filters.value) }
+    fun filter(change: (LedgerFilters) -> LedgerFilters) {
+        filters.value = change(filters.value).let { it.copy(search = it.search.take(200)) }
+    }
     fun moveMonth(delta: Long) {
         val month = filters.value.month.plusMonths(delta)
-        if (month.year in 1..9999) filter { it.copy(month = month) }
+        if (month.year in 1..9999) filter { it.copy(month = month, allDates = false) }
     }
 
     fun newBudget(categoryId: String? = null) = open(BudgetDraft(UUID.randomUUID(), month = filters.value.month.toString(), categoryId = categoryId))
@@ -153,7 +173,7 @@ class LedgerViewModel(private val repository: LedgerRepository, private val cloc
         val confirmation = budgetCopy.value ?: return
         work(budgetAction = true) {
             repository.copyBudgetsToNextMonth(confirmation.plan.fromMonth, confirmation.expectedLedgerRevision)
-            filter { it.copy(month = confirmation.plan.toMonth) }
+            filter { it.copy(month = confirmation.plan.toMonth, allDates = false) }
             mutableBudgetCopy.value = null
             mutableNotice.value = LedgerNotice(message = R.string.budgets_copied)
         }
@@ -220,7 +240,7 @@ class LedgerViewModel(private val repository: LedgerRepository, private val cloc
                 is BudgetDraft -> {
                     val budget = draft.budget()
                     repository.saveBudget(budget, draft.original?.metadata?.revision)
-                    filter { it.copy(month = budget.month) }
+                    filter { it.copy(month = budget.month, allDates = false) }
                     LedgerNotice(message = R.string.budget_saved)
                 }
                 is AccountDraft -> {

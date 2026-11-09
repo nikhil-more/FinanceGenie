@@ -1,6 +1,7 @@
 package com.financegenie.android.data.local
 
 import android.database.sqlite.SQLiteConstraintException
+import androidx.room.withTransaction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.financegenie.android.data.DuplicateRecordException
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -78,6 +80,25 @@ class RoomLedgerRepositoryTest {
     }
 
     @Test
+    fun revisionCheckedReadsSeeWritesFromAnotherRepository() = runBlocking<Unit> {
+        seedAccounts()
+        val first = repository.read()
+        val other = RoomLedgerRepository(database, storageClock)
+        other.saveCategory(LedgerCategory("shopping", "Shopping"))
+        val updated = repository.read()
+        assertEquals(first.settings.revision + 1, updated.settings.revision)
+        assertTrue(updated.categories.any { it.value.id == "shopping" })
+        val otherBefore = other.read()
+        val event = storageExpense()
+        repository.applyTransactions(listOf(TransactionWrite(event)))
+        val otherAfter = other.read()
+        assertEquals(otherBefore.settings.revision + 1, otherAfter.settings.revision)
+        assertEquals(event, otherAfter.transactions.single().transaction)
+        assertEquals("manual:${event.id}", otherAfter.evidence.single().input.sourceKey)
+        assertEquals(otherAfter, repository.read())
+    }
+
+    @Test
     fun exactMoneyDatesInstantsNotesBudgetsAndObservationsRoundTrip() = runBlocking<Unit> {
         repository.saveAccount(storageAccounts()[0].copy(openingBalanceMinor = Money.INPUT_MAX_MINOR))
         repository.saveAccount(storageAccounts()[2].copy(openingBalanceMinor = -Money.INPUT_MAX_MINOR))
@@ -106,6 +127,46 @@ class RoomLedgerRepositoryTest {
         assertEquals(observation, stored.observations.single().value)
         assertEquals(Money.INPUT_MAX_MINOR - 6, LedgerCalculator(storageClock).monthlyReport(stored.snapshot, month).accountPositionsMinor.getValue(storageBankId))
         assertEquals(2, stored.evidence.size)
+    }
+
+    @Test
+    fun rolledBackOuterTransactionCannotPoisonAReusedRevision() = runBlocking<Unit> {
+        checkRolledBackOuterTransaction(switchDispatcher = false)
+    }
+
+    @Test
+    fun rolledBackOuterTransactionAcrossDispatchersCannotPoisonAReusedRevision() = runBlocking<Unit> {
+        checkRolledBackOuterTransaction(switchDispatcher = true)
+    }
+
+    @Test
+    fun rolledBackSnapshotCannotHideACommitThroughAnotherDatabaseConnection() = runBlocking<Unit> {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val name = "cache-rollback-test-${UUID.randomUUID()}.db"
+        val firstDatabase = FinanceGenieDatabase.open(context, name, storageClock)
+        try {
+            val first = RoomLedgerRepository(firstDatabase, storageClock)
+            val before = first.read()
+            expectFailure<RollbackProbe> {
+                firstDatabase.withTransaction {
+                    first.saveCategory(LedgerCategory("rolled_back", "Rolled back synthetic category"))
+                    assertTrue(first.read().categories.any { it.value.id == "rolled_back" })
+                    throw RollbackProbe()
+                }
+            }
+            val secondDatabase = FinanceGenieDatabase.open(context, name, storageClock)
+            try {
+                val second = RoomLedgerRepository(secondDatabase, storageClock)
+                second.saveCategory(LedgerCategory("committed", "Committed synthetic category"))
+                val committed = second.read()
+                assertEquals(before.settings.revision + 1, committed.settings.revision)
+                assertEquals(committed, first.read())
+                assertFalse(first.read().categories.any { it.value.id == "rolled_back" })
+            } finally { secondDatabase.close() }
+        } finally {
+            firstDatabase.close()
+            context.deleteDatabase(name)
+        }
     }
 
     @Test
@@ -203,6 +264,7 @@ class RoomLedgerRepositoryTest {
         }
         assertEquals(before, repository.read())
         assertEquals(groups, database.ledgerDao().groupCount())
+        assertEquals(before, RoomLedgerRepository(database, storageClock).read())
     }
 
     @Test
@@ -349,6 +411,29 @@ class RoomLedgerRepositoryTest {
         storageAccounts().forEach { repository.saveAccount(it) }
         repository.saveCategory(LedgerCategory("food", "Food"))
     }
+
+    private suspend fun checkRolledBackOuterTransaction(switchDispatcher: Boolean) {
+        seedAccounts()
+        val before = repository.read()
+        expectFailure<RollbackProbe> {
+            database.withTransaction {
+                repository.saveCategory(LedgerCategory("rolled_back", "Rolled back synthetic category"))
+                val uncommitted = if (switchDispatcher) withContext(Dispatchers.Default) { repository.read() } else repository.read()
+                assertEquals(before.settings.revision + 1, uncommitted.settings.revision)
+                assertTrue(uncommitted.categories.any { it.value.id == "rolled_back" })
+                throw RollbackProbe()
+            }
+        }
+        // A different repository can legitimately reuse the revision after rollback.
+        val other = RoomLedgerRepository(database, storageClock)
+        other.saveCategory(LedgerCategory("committed", "Committed synthetic category"))
+        val committed = other.read()
+        assertEquals(before.settings.revision + 1, committed.settings.revision)
+        assertEquals(committed, repository.read())
+        assertFalse(repository.read().categories.any { it.value.id == "rolled_back" })
+    }
+
+    private class RollbackProbe : RuntimeException()
 
     private suspend inline fun <reified T : Throwable> expectFailure(crossinline action: suspend () -> Unit) {
         val failure = try {

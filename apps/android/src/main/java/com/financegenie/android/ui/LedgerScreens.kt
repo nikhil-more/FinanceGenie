@@ -83,30 +83,7 @@ private fun magnitudeMoney(minor: Long): String = NumberFormat.getCurrencyInstan
     }
 }
 
-@Composable internal fun OverviewScreen(state: LedgerUiState, model: LedgerViewModel, accounts: () -> Unit) {
-    val ledger = requireNotNull(state.ledger)
-    val report = requireNotNull(state.report)
-    LazyColumn(modifier = Modifier.testTag("overview_list"), contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { MonthSelector(state, model) }
-        if (ledger.accounts.isEmpty()) item {
-            Text(stringResource(R.string.overview_empty_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
-            Text(stringResource(R.string.no_accounts_help))
-            Button(onClick = accounts, modifier = Modifier.testTag("overview_accounts")) { Text(stringResource(R.string.add_account)) }
-        } else {
-            item { Metric(R.string.net_spending, report.netSpendingMinor, "metric_spending") }
-            item { Text(stringResource(R.string.spending_help)) }
-            item { Metric(R.string.gross_spending, report.grossSpendingMinor, "metric_expenses") }
-            item { Metric(R.string.refunds, report.refundsMinor, "metric_refunds") }
-            item { Metric(R.string.income, report.incomeMinor, "metric_income") }
-            item { Metric(R.string.recorded_surplus, report.recordedSurplusMinor, "metric_surplus") }
-            item { Metric(R.string.estimated_tracked_balance, requireNotNull(state.currentReport).totalTrackedPositionMinor, "metric_tracked") }
-            item { Text(stringResource(R.string.estimated_as_of, state.currentReport!!.balancesAsOfDate.toString())) }
-            item { Button(onClick = accounts) { Text(stringResource(R.string.manage_accounts)) } }
-        }
-    }
-}
-
-@Composable private fun Metric(@StringRes label: Int, amount: Long, tag: String) {
+@Composable internal fun Metric(@StringRes label: Int, amount: Long, tag: String) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(stringResource(label), style = MaterialTheme.typography.labelLarge)
@@ -119,20 +96,7 @@ private fun magnitudeMoney(minor: Long): String = NumberFormat.getCurrencyInstan
     val ledger = requireNotNull(state.ledger)
     LazyColumn(modifier = Modifier.testTag("transaction_list"), contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                MonthSelector(state, model)
-                FormField(state.filters.search, { query -> model.filter { it.copy(search = query) } }, R.string.search_transactions, "search_transactions")
-                ChoiceField(stringResource(R.string.account), state.filters.accountId?.toString() ?: "all",
-                    listOf(Choice("all", stringResource(R.string.all_accounts))) + ledger.accounts.map { Choice(it.value.id.toString(), it.value.name) }, "filter_account") { id ->
-                    model.filter { it.copy(accountId = id.takeUnless { it == "all" }?.let(java.util.UUID::fromString)) }
-                }
-                ChoiceField(stringResource(R.string.category), state.filters.categoryId ?: "all",
-                    listOf(Choice("all", stringResource(R.string.all_categories))) + ledger.categories.map { Choice(it.value.id, it.value.name) }, "filter_category") { id ->
-                    model.filter { it.copy(categoryId = id.takeUnless { it == "all" }) }
-                }
-                ToggleRow(R.string.all_dates, state.filters.allDates, "filter_all_dates") { enabled -> model.filter { it.copy(allDates = enabled) } }
-                ToggleRow(R.string.show_deleted, state.filters.showDeleted, "filter_deleted") { enabled -> model.filter { it.copy(showDeleted = enabled) } }
-            }
+            ActivityFilters(state, model, expandable = false, feedOptions = true)
         }
         if (state.rows.isEmpty()) item {
             Text(stringResource(if (ledger.transactions.isEmpty()) R.string.transactions_empty_title else R.string.no_matching_transactions),

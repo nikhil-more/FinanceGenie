@@ -1,6 +1,7 @@
 package com.financegenie.android.data.local
 
 import androidx.room.withTransaction
+import androidx.sqlite.db.SimpleSQLiteQuery
 import com.financegenie.android.data.DuplicateRecordException
 import com.financegenie.android.data.BudgetCopyResult
 import com.financegenie.android.data.LedgerRepository
@@ -31,6 +32,7 @@ class RoomLedgerRepository(
 ) : LedgerRepository {
     private val dao = database.ledgerDao()
     private val validator = LedgerValidator(clock)
+    @Volatile private var cachedLedger: CachedLedger? = null
 
     override suspend fun read(): StoredLedger = database.withTransaction { load() }
 
@@ -192,15 +194,27 @@ class RoomLedgerRepository(
             .map { it.toRecord() }
     }
 
-    private suspend fun load(): StoredLedger = StoredLedger(
-        settings = dao.settings().toSettings(),
-        accounts = dao.accounts().map { it.toRecord() },
-        categories = dao.categories().map { it.toRecord() },
-        transactions = dao.allTransactions().map { it.toRecord() },
-        budgets = dao.budgets().map { it.toRecord() },
-        observations = dao.observations().map { it.toRecord() },
-        evidence = dao.evidence().map { it.toRecord() },
-    )
+    private suspend fun load(): StoredLedger {
+        // Called inside a Room transaction. Every committed repository write advances
+        // this revision, including writes through another repository instance.
+        val settings = dao.settings().toSettings()
+        // A caller can also nest repository operations in an outer transaction.
+        // Its rollback can reuse a revision later: total_changes tracks even rolled-
+        // back writes on this connection; data_version tracks other connections.
+        val localChanges = dao.connectionChanges()
+        val dataVersion = dao.dataVersion(SimpleSQLiteQuery("PRAGMA data_version"))
+        cachedLedger?.takeIf { it.ledger.settings == settings && it.localChanges == localChanges && it.dataVersion == dataVersion }
+            ?.let { return it.ledger }
+        return StoredLedger(
+            settings = settings,
+            accounts = dao.accounts().map { it.toRecord() },
+            categories = dao.categories().map { it.toRecord() },
+            transactions = dao.allTransactions().map { it.toRecord() },
+            budgets = dao.budgets().map { it.toRecord() },
+            observations = dao.observations().map { it.toRecord() },
+            evidence = dao.evidence().map { it.toRecord() },
+        ).also { cachedLedger = CachedLedger(it, localChanges, dataVersion) }
+    }
 
     private suspend fun <T> mutate(action: suspend (StoredLedger) -> T): T = database.withTransaction {
         val before = load()
@@ -220,4 +234,5 @@ class RoomLedgerRepository(
     }
 
     private data class PreparedWrite(val previous: TransactionRecord?, val current: TransactionRecord)
+    private data class CachedLedger(val ledger: StoredLedger, val localChanges: Long, val dataVersion: Long)
 }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <permission android:name="${applicationId}.permission.PREPARE_FIXTURE" android:protectionLevel="signature" />
+    <uses-permission android:name="${applicationId}.permission.PREPARE_FIXTURE" />
+    <application android:name=".BenchmarkApplication" tools:replace="android:name">
+        <profileable android:shell="true" />
+        <activity android:name=".BenchmarkSetupActivity" android:exported="true"
+            android:permission="${applicationId}.permission.PREPARE_FIXTURE" />
+    </application>
+</manifest>

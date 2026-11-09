@@ -217,3 +217,68 @@ References checked for this implementation:
 - **Verification:** Domain, atomic-storage, UI, large-font and process-restart checks
   pass and are recorded in the Step 5 verification entry. No claimed migration
   exists because this step changes queries/operations rather than table definitions.
+
+## 2026-11-09 — Step 6 offline analytics and performance
+
+- **Report boundary:** Validate a complete, coherent ledger revision before applying
+  account/category/search/date activity filters. A selected refund can reference
+  an original purchase outside that selection. Overview totals, signed trends and
+  recent activity share the same selection as Transactions; deleted rows never
+  enter analytics. Filtering a partial snapshot before validation was rejected
+  because it would break valid linked-refund history.
+- **Independent scopes:** Monthly budgets always use all accounts and the full
+  selected calendar month. Estimated tracked positions include the complete
+  ledger through today, with an explicit as-of date and scope explanation.
+  Activity filters cannot hide overspending against a monthly cap or change the
+  meaning of a tracked balance.
+- **Presentation:** Use small native signed bars and exact text instead of a chart
+  dependency or a pie chart that cannot represent net refunds. Category and monthly
+  rows expose signed amounts directly; daily bars have a date/amount text view.
+  Daily series cover the selected month or the last thirty days in all-date mode;
+  monthly series contain at most six buckets. Chart windows stay bounded without
+  narrowing all-date summary totals or recent activity. Floating point sizes
+  pixels only; financial labels retain integer-paise arithmetic.
+- **Calculation cost:** Batch report requests so full-ledger validation runs once
+  and account positions are reused for requests with the same as-of date. Keep
+  the pure financial engine as the source of totals rather than duplicating its
+  semantics in chart components or SQL aggregates.
+- **Measured read optimization:** An initial 10,000-record Save-to-visible
+  measurement was 445 ms P95. A revision-checked snapshot cache reduced an
+  intermediate measurement to 309 ms P95, still above the proposed 300 ms target.
+  Retain one snapshot per repository to avoid duplicate full reads while preserving
+  complete before/after validation and atomic writes/history/evidence. Every read
+  checks the cache key inside a Room transaction: ledger settings, SQLite
+  `total_changes()` and `PRAGMA data_version`. The connection counters guard nested
+  rollback/revision reuse and changes through other connections, which the ledger
+  revision alone cannot distinguish. This trades retained snapshot memory and a
+  few small checks for less repeated loading. Revisit with performance regressions,
+  larger recovery/import datasets or changes to database connection ownership.
+- **Measurement isolation:** Use a separate `.benchmark` app based on release,
+  with debugging disabled, shell profiling enabled and 10,000 synthetic records.
+  Its fixed clock, database, preferences and permission-protected setup route are
+  excluded from normal debug/release APKs. Measurements never clear or use the
+  user's ledger. Warm revision-checked reads and summaries from fresh repository
+  instances are reported separately; Save includes the actual click through the
+  expected rendered metric and Compose idle. See [the methodology](performance.md)
+  for cache/compilation conditions and measurement limits.
+- **Capture correction:** Two Macrobenchmark 1.3.4 attempts each yielded only
+  thirteen valid startup samples from twenty requested runs. The missing samples
+  had truncated process names in the app's traces. Adopt 1.4.1, whose
+  [AndroidX matcher](https://android.googlesource.com/platform/frameworks/support/+/3ecf191783372810d8cbe9dededeea09dde6ae07/benchmark/benchmark-traceprocessor/src/commonMain/kotlin/androidx/benchmark/traceprocessor/TraceProcessor.kt)
+  recognizes the last fifteen characters when the full process name is unavailable.
+  Its artifacts support the pinned SDK 34/AGP toolchain. Keep the requirement for
+  twenty valid startup samples; partial captures do not establish a target result.
+- **Final measurement choice:** Committed-frame synchronization verifies all
+  twenty launches, but standard trace startup extraction still yields 14/20.
+  Preserve that result as incomplete. A separate monotonic readiness driver times
+  all twenty process-cold launches through exact UI/PID/foreground confirmation;
+  its custom metric names do not claim AndroidX TTID/TTFD. The confirmed P95 is
+  2,278.64ms, above the unchanged 2,000ms target; the frame-commit diagnostic is
+  632.66ms and does not guarantee physical presentation. This trades a conservative
+  endpoint with automation overhead for a complete, reproducible baseline while
+  keeping trace/confirmation hardening open for Gate A.
+- **Verification status:** 66 JVM, 27 phone storage and 23 UI tests plus two
+  fresh-process checks pass. Final summary/search/expense-save P95 values are
+  187.30/2.99/278.76ms and meet their budgets. Analytics and baseline collection
+  complete Step 6; startup limitations, budget-save latency and other Gate A
+  requirements remain recorded in the verification log and progress tracker.

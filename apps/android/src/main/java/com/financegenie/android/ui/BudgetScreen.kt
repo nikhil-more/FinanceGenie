@@ -51,6 +51,7 @@ internal fun budgetScopeKey(categoryId: String?): String = categoryId?.let { "ca
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.budget_help))
+                Text(stringResource(R.string.budget_filter_scope), style = MaterialTheme.typography.bodySmall)
                 Button(onClick = { model.newBudget() }, enabled = !busy, modifier = Modifier.fillMaxWidth().testTag("add_budget")) { Text(stringResource(R.string.add_budget)) }
                 TextButton(onClick = model::askCopyBudgets, enabled = !busy && state.budgets.isNotEmpty() && state.filters.month < YearMonth.of(9999, 12),
                     modifier = Modifier.fillMaxWidth().testTag("copy_budgets")) { Text(stringResource(R.string.copy_budgets)) }

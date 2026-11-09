@@ -52,11 +52,24 @@ class LedgerCalculator(private val clock: Clock = Clock.systemUTC()) {
         DateRange.month(month),
     )
 
-    fun report(snapshot: LedgerSnapshot, range: DateRange): LedgerReport {
+    fun report(snapshot: LedgerSnapshot, range: DateRange, selection: TransactionSelection = TransactionSelection()): LedgerReport =
+        reports(snapshot, listOf(ReportRequest(range, selection))).single()
+
+    /** Validate the complete ledger once; filtered refunds can still reference an out-of-scope purchase. */
+    fun reports(snapshot: LedgerSnapshot, requests: List<ReportRequest>): List<LedgerReport> {
         validator.validate(snapshot)
-        val asOfDate = minOf(range.endExclusive.minusDays(1), LedgerDates.today(clock))
         val active = snapshot.transactions.filterNot { it.isDeleted }
-        val period = active.filter { it.effectiveDate in range }
+        val today = LedgerDates.today(clock)
+        val positionCache = mutableMapOf<LocalDate, Map<UUID, Long>>()
+        return requests.map { request ->
+            val asOf = minOf(request.range.endExclusive.minusDays(1), today)
+            buildReport(active, request, asOf, positionCache.getOrPut(asOf) { positions(snapshot, active, asOf) })
+        }
+    }
+
+    private fun buildReport(active: List<LedgerTransaction>, request: ReportRequest, asOfDate: LocalDate, positions: Map<UUID, Long>): LedgerReport {
+        val range = request.range
+        val period = active.filter { it.effectiveDate in range && request.selection.includes(it) }
         val categories = mutableMapOf<String, BigInteger>()
         val categoryExpenses = mutableMapOf<String, BigInteger>()
         val categoryRefunds = mutableMapOf<String, BigInteger>()
@@ -78,7 +91,7 @@ class LedgerCalculator(private val clock: Clock = Clock.systemUTC()) {
         return LedgerReport(
             range = range,
             balancesAsOfDate = asOfDate,
-            accountPositionsMinor = positions(snapshot, active, asOfDate),
+            accountPositionsMinor = positions,
             grossSpendingMinor = Money.sum(period.filter { it.kind == TransactionKind.EXPENSE }.map { it.amountMinor }),
             refundsMinor = Money.sum(period.filter { it.kind == TransactionKind.REFUND }.map { it.amountMinor }),
             incomeMinor = Money.sum(period.filter { it.kind == TransactionKind.INCOME }.map { it.amountMinor }),

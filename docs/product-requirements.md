@@ -6,15 +6,17 @@ and acceptance specification; this document records the scope being started.
 The user has started milestone A implementation and requested a maintained
 `progress_tracker.md` covering verification and tradeoffs at every step. The
 foundation, financial model, Room storage and manual-management screens are
-implemented; Step 4 automated/manual and Step 5 budget acceptance have passed. The app
+implemented; Step 4 automated/manual, Step 5 budgets and Step 6 analytics/baseline
+acceptance have passed. Startup measurement limits remain explicit Gate A work. The app
 starts without sign-in, payment credentials or sensitive
 permissions. Initial currency is INR, reporting zone Asia/Kolkata, minimum Android
 API 26. The user provides a physical phone for testing; the current reference is
 an A063 running Android 15 / API 35. Device serials and personal data are not recorded.
 
 The app offers Overview, Transactions, Budgets and Settings navigation, account/
-category management, manual transactions, calendar budgets, exact basic totals,
-light/dark themes and empty/error states. Charts/imports remain their later steps.
+category management, manual transactions, calendar budgets, exact scoped totals,
+signed charts with text alternatives, recent activity, shared filters,
+light/dark themes and empty/error states. CSV imports remain Step 7.
 It contains
 no invented financial values or nonfunctional add/import buttons. Debug and release
 application IDs differ to isolate their data.

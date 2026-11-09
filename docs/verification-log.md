@@ -436,3 +436,108 @@ are maintained in [progress_tracker.md](../progress_tracker.md).
 - **Status:** Step 5 PASS. Next is Step 6 offline analytics and measured performance.
   Gate A remains outstanding until its other features and recovery/accessibility/
   backup acceptance checks are complete.
+
+## Step 6 — Offline analytics and performance baseline — 2026-11-09
+
+- **Implemented:** Scoped gross/net spending, received refunds, income and recorded
+  surplus; current estimated tracked positions; signed category bars, bounded
+  daily/six-month trends and exact text alternatives; five recent matching events
+  with source/edit controls and navigation to the matching feed. Overview and
+  Transactions share literal search, account/category and month/all-date filters.
+  Budgets retain complete-month/all-account scope; current positions retain all
+  recorded history through today. Deleted rows never enter analytics.
+- **Financial boundary:** Validate the complete ledger before applying selection,
+  so a filtered refund can still reference an out-of-scope purchase. Batched
+  reports share validation and positions by as-of date. Money labels remain exact
+  integer paise; only chart geometry uses floating-point fractions. Empty days/
+  months are zero-filled; refund-heavy categories can extend below zero.
+- **Build:** Full debug/release/test/benchmark app and driver checks pass:
+  **BUILD SUCCESSFUL in 53s**, 205 tasks (43 executed, 162 up-to-date). The final
+  debug test/lint build passes in **21s**, 56 tasks; benchmark instrumentation in
+  **16s**, 47 tasks; the updated startup driver in **9s**, 29 tasks. **66 JVM
+  tests** pass with zero failures/errors/skips. Lint reports **No issues found**.
+  Exported Room schema v1 is unchanged. This is not a migration.
+- **Phone correctness:** Final `env -u ADB_SERVER_SOCKET python3
+  scripts/verify_storage_on_device.py --ui` run passes **27 storage tests**
+  (1.155s), **12 entry/navigation/privacy/error/layout tests** (74.967s), **five
+  budget tests** (40.149s), and **six analytics tests** (25.852s). Separate storage
+  and expense/budget save/force-stop/read stages pass, enforcing fresh reader
+  processes. The final normal-app launch reports **Status: ok**. The default ADB
+  server had the authorized phone; no reconnection or server reset was required.
+- **Analytics cases:** Golden totals and signed category/daily/monthly values;
+  literal merchant/notes search, account/category/date intersections, both transfer
+  accounts, budget independence, recent editing and cross-surface convergence;
+  no accounts/no events, one-paise refund then deletion, and 1,000 one-paise events
+  with an exact ₹10 total. JVM cases also cover leap day, earliest supported month,
+  all-history totals with bounded chart windows and archived long labels.
+- **Cache correctness:** Reuse one snapshot only when ledger settings and SQLite
+  connection/cross-connection counters match. Added cross-repository invalidation
+  and three outer-rollback/reused-revision cases, including dispatcher switching
+  and a second file-backed DB connection. They all pass on the phone. This closes
+  a defect found during review of a revision-only cache: a rolled-back revision
+  could otherwise hide different data committed later at the same revision.
+  Atomic writes, provenance, full validation and stale-edit rules remain intact.
+- **Test synchronization:** The rotation test asserts both the accepted text field
+  and retained ViewModel draft before recreation. Its earlier failure occurred
+  without that input-completion precondition; the final unchanged ₹199.50
+  expectation passes. Analytics tests use the fixture's actual hexadecimal UUIDs
+  and wait for the requested month/report before asserting. No financial expected
+  value, lock policy or mandatory test is relaxed or skipped.
+- **Layout:** The synthetic 200% font/dark analytics capture was retrieved from
+  the test-owned app cache and visually inspected. Archived long labels wrap,
+  exact positive/negative amounts and zero baselines remain available with
+  scrolling. Daily values and all monthly/category amounts have text alternatives.
+  This does not claim a new human analytics-specific TalkBack run; the full-app
+  walkthrough remains part of Gate A.
+- **Performance build:** Final isolated app/driver/test compilation passes in
+  **23s**, 106 tasks (16 executed, 90 up-to-date). Benchmark-only lifecycle and
+  committed-frame signals are excluded from normal apps. The runner verifies
+  installed-artifact hashes and complete sample counts; a completed report is
+  preserved by requiring a fresh output directory on later runs.
+- **Performance results:** The [aggregate baseline](performance-baseline.json)
+  records **20 process-cold launches** and **30 samples per operation** on the
+  non-debuggable/profileable A063 build with 10,000 synthetic records. P95 values:
+  confirmed Overview **2,278.64ms**, committed-frame diagnostic **632.66ms**,
+  monthly summary including an uncached snapshot read **187.30ms**, 50-row search
+  **2.99ms**, expense Save-to-visible **278.76ms**, warm revision-checked read
+  **1.79ms**. Summary/search/expense-save targets pass; the conservative confirmed
+  startup endpoint exceeds its 2,000ms target. It includes process creation,
+  frame commit, broadcast delivery and exact UI/PID/foreground verification.
+  Frame commit is buffer submission, not guaranteed display presentation; its
+  shorter time is not substituted for the failed confirmation result.
+- **Trace limitation:** Two Macrobenchmark 1.3.4 attempts yielded 13/20 startup
+  samples. Compatible 1.4.1 fixes truncated process-name matching, restoring frame
+  groups, but TTID/TTFD still remains 14/20 even after all twenty launches pass a
+  nonce-correlated fully-drawn/frame-commit barrier. These results remain
+  **INCOMPLETE**, recorded in the [trace diagnostic](performance-trace-diagnostic.json).
+  The direct readiness method independently measures all twenty launches from
+  before the Activity request to the committed frame and later UI confirmation;
+  it does not fill or rename missing trace timings. Startup instrumentation and
+  budget-save latency remain Gate A checks. No timing target is relaxed.
+- **Other baselines:** APK **7,163,426 bytes**, maximum sampled process PSS
+  **268,819 KiB**, without claiming a continuous absolute peak. The earlier trace
+  diagnostic identifies its own artifact and 505 captured frame samples: CPU
+  duration P95 **74.96ms**, overrun P95 **130.89ms**. Capture coverage is incomplete;
+  this is not a universal frame/smoothness pass.
+- **Isolation:** Benchmark target is separately packaged, non-debuggable and
+  profileable, with fixed synthetic data and a same-signature setup permission.
+  Debug/release APK inspection confirms benchmark classes/setup/data are absent;
+  normal permissions remain the AndroidX internal receiver permission only.
+  No real ledger wipe, credential access, personal capture, broad phone log or
+  global accessibility change is used. Raw traces and device serials stay out of
+  version control; `.gitignore` now excludes Perfetto/library report artifacts.
+  After retaining one test-owned trace locally, the three synthetic benchmark
+  packages were uninstalled and FinanceGenie Dev reopened with its data retained.
+- **Evidence:** `/tmp/financegenie-step6-verified-build.log`,
+  `/tmp/financegenie-step6-rollback-tests-build.log`,
+  `/tmp/financegenie-step6-verified-performance-test-build.log`,
+  `/tmp/financegenie-step6-verified-driver-build.log`,
+  `/tmp/financegenie-step6-verified-phone.log`,
+  `/tmp/financegenie-step6-readiness-build.log`,
+  `/tmp/financegenie-step6-readiness-performance-run.log`, aggregate JSON reports,
+  JVM/lint reports and checked-in
+  tests/drivers. These are local/device results; remote CI is separate.
+- **Status:** Step 6 PASS for accurate accessible analytics and recorded baseline.
+  Startup confirmation/trace limitations and budget-save timing are explicit open
+  Gate A checks. CSV is Step 7; recovery, full-app accessibility, actual OS backup
+  behavior and Gate A remain outstanding.

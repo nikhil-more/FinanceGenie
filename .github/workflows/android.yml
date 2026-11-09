@@ -38,6 +38,12 @@ jobs:
           :apps:android:lintDebug
           :apps:android:assembleDebugAndroidTest
           :apps:android:assembleRelease
+          :apps:android:assembleBenchmark
+          :benchmarks:assembleBenchmark
+      - name: Compile performance instrumentation
+        run: >-
+          ./gradlew --no-daemon -PfinancegenieTestBuildType=benchmark
+          :apps:android:assembleBenchmarkAndroidTest
       - name: Verify exported Room schemas are committed
         run: |
           git diff --exit-code -- apps/android/schemas/

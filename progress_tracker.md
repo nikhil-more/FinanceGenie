@@ -33,7 +33,7 @@ architecture decisions live in [the decision record](docs/decisions.md).
 | 3 | Room persistence and atomic operations | PASS | 17 phone storage tests plus fresh-process probe; 35 JVM tests, debug/release/test builds and lint pass | Below |
 | 4 | Accounts, manual transactions and navigation | PASS | 45 JVM tests, 12 phone UI tests, restart probes and user-confirmed lock/preview/TalkBack checks pass | Below |
 | 5 | Calendar budgets | PASS | 55 JVM tests, 23 phone storage tests, 17 UI tests and expense/budget restart probe pass; schema unchanged | Below |
-| 6 | Offline overview and analytics | NOT STARTED | After Step 5 | Record when started |
+| 6 | Offline overview and analytics | PASS | 66 JVM, 27 storage, 23 UI tests and fresh-process checks pass; 20-launch/30-operation baseline recorded, with startup limitation retained for Gate A | Below |
 | 7 | CSV preview/import/undo | NOT STARTED | After Step 6 | Record when started |
 | 8 | Backup, restore, export and local deletion | NOT STARTED | After Step 7 | Record when started |
 | 9 | Offline acceptance / Gate A | NOT STARTED | Requires Steps 0–8 and phone evidence | Record when started |
@@ -206,8 +206,57 @@ architecture decisions live in [the decision record](docs/decisions.md).
   Overview after unlocking instead of assuming a restored destination. Expected
   financial/session results are unchanged, and no test is skipped.
 
+### Step 6 — Coherent offline analytics and measured performance
+
+- **Decision:** Calculate scoped Overview metrics/trends and recent
+  activity from one complete validated ledger revision. Share account/category/
+  search/date filters with Transactions. Deleted records stay out of analytics;
+  monthly budgets and current tracked positions retain their full-ledger meaning.
+- **Visuals:** Small native signed bars with exact textual amounts, a zero baseline,
+  and accessible daily/monthly alternatives. Refund-heavy categories can be negative.
+  Charts are bounded to a selected month/30 days and six monthly buckets.
+- **Alternative:** Add a chart library, filter a partial snapshot before validation,
+  or compare budget caps against a filtered subset of spending.
+- **Reason:** Preserve linked-refund validity, exact arithmetic and clear scope.
+- **Performance method:** Use an isolated release-like/profileable benchmark app and
+  10,000 synthetic events. Measure startup, summary/search and save-to-visible paths
+  before making performance claims; keep raw traces/device identifiers uncommitted.
+- **Measured optimization:** Avoid duplicate full reads with one cached snapshot,
+  checked against ledger settings and SQLite local/cross-connection change counters.
+  The additional counters handle rollback/reused revisions, including a separate
+  DB connection. This retains one snapshot in memory while preserving full
+  validation, atomic history/evidence and stale-edit checks. Save
+  P95 improved from 445ms initially to 278.76ms in the final measurement, within
+  the proposed 300ms target. An intermediate 309ms miss is retained in the history.
+- **Capture correction:** Macrobenchmark 1.3.4 missed truncated process names,
+  yielding 13/20 samples twice. Compatible 1.4.1 improves matching without a
+  toolchain upgrade, but standard TTID/TTFD still yields only 14/20 after a
+  committed-frame barrier. It remains explicitly incomplete. The direct readiness
+  driver verifies process absence, nonce/PID, a committed loaded frame and exact
+  visible values across all twenty launches; it does not fill missing trace metrics.
+- **Verification:** 66 JVM tests, 27 phone storage tests, 23 UI tests and two
+  fresh-process checks pass. Golden/filter/edit convergence, empty/single/1,000-row
+  data, negative categories and 200% long-label layouts pass. Builds/lint pass,
+  schema v1 and normal permissions are unchanged. The reviewed 10,000-record
+  baseline includes twenty cold launches and thirty samples per operation: summary
+  P95 187.30ms, search 2.99ms and expense Save-to-visible 278.76ms pass their targets.
+  The conservative UI-confirmed startup P95 is 2,278.64ms, above 2,000ms; committed
+  frame P95 is 632.66ms but is not substituted for confirmation/presentation timing.
+- **Consequence/revisit:** Step 6's accurate analytics and baseline gate is complete.
+  Keep startup confirmation/trace hardening and budget-save latency open for Gate A;
+  the startup budget is not relaxed. The baseline includes automation overhead,
+  uses warm OS caches/installed compilation state, and samples rather than
+  continuously measures PSS. Revisit cache ownership when restoring/replacing a DB
+  and compare future imports/recovery at their actual dataset limits.
+- **Evidence:** [Analytics behavior](docs/analytics.md),
+  [measurement method/results](docs/performance.md),
+  [aggregate baseline](docs/performance-baseline.json) and
+  [verification](docs/verification-log.md#step-6--offline-analytics-and-performance-baseline--2026-11-09).
+
 ## Current actions and outstanding checks
 
-1. Next implementation step: offline overview and analytics (Step 6).
-2. Device-backup behavior remains a later Gate A check; never commit a full phone
+1. Implement CSV preview/import/undo (Step 7).
+2. Before Gate A, address startup confirmation/trace limits and measure budget-save
+   latency. Do not claim a twenty-run AndroidX TTFD result from the incomplete capture.
+3. Device-backup behavior remains a later Gate A check; never commit a full phone
    log or personal screenshot.

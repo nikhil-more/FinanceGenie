@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "FinanceGenie"
 include(":apps:android")
+include(":benchmarks")

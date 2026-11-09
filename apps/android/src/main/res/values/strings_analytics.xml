@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="activity_filters">Activity filters</string>
+    <plurals name="activity_count">
+        <item quantity="one">%1$d matching transaction</item>
+        <item quantity="other">%1$d matching transactions</item>
+    </plurals>
+    <string name="filter_summary">%1$s · %2$s</string>
+    <string name="filter_search_summary">Search: %1$s</string>
+    <string name="activity_filter_help">These filters apply to Overview and Transactions. Deleted records never count in totals.</string>
+    <string name="current_balance_scope">Current estimates include all tracked accounts and recorded activity, independently of activity filters.</string>
+    <string name="budget_filter_scope">Budgets use all accounts and the full selected calendar month, independently of activity filters.</string>
+    <string name="category_spending">Net spending by category</string>
+    <string name="category_chart_help">Net refunds extend left of zero; net expenses extend right. Exact amounts appear with every category.</string>
+    <string name="no_spending_activity">No expenses or refunds match these filters.</string>
+    <string name="daily_spending">Daily net spending</string>
+    <string name="monthly_spending">Monthly net spending</string>
+    <string name="trend_range">%1$s to %2$s</string>
+    <string name="daily_chart_help">Above zero is net expense; below zero is net refund. Show daily values for exact amounts.</string>
+    <string name="show_daily_values">Show daily values</string>
+    <string name="hide_daily_values">Hide daily values</string>
+    <string name="recent_activity">Recent matching transactions</string>
+    <string name="view_transactions">View matching transactions</string>
+    <string name="recent_edit">Edit %1$s from %2$s</string>
+    <string name="no_recent_activity">No recorded transactions match these filters.</string>
+</resources>

@@ -10,6 +10,8 @@ captures/
 .externalNativeBuild/
 __pycache__/
 *.hprof
+*.perfetto-trace
+*benchmarkData.json
 
 # IDE and operating-system files
 .idea/

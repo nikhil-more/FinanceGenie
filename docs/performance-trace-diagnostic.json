@@ -1,0 +1,85 @@
+{
+  "date": "2026-11-09",
+  "deviceModel": "A063",
+  "apiLevel": 35,
+  "recordCount": 10000,
+  "macrobenchmarkVersion": "1.4.1",
+  "appApkSha256": "3886a9eba16d9ba7b615f9b0acd330dadcc04820f4df2f3f73023c3b24de931c",
+  "requestedLaunches": 20,
+  "verifiedCommittedOverviewLaunches": 20,
+  "validTraceStartupSamples": 14,
+  "status": "INCOMPLETE TRACE DIAGNOSTIC; not used for the startup target",
+  "limitation": "Some trace startup timings remain missing despite committed-frame signals. Frame summaries describe captured samples, not a complete per-launch presentation guarantee. The final readiness baseline uses a separately identified artifact/method.",
+  "traceStartupMs": {
+    "timeToFullDisplayMs": {
+      "samples": 14,
+      "p50": 859.306614,
+      "p95": 903.07776,
+      "max": 903.07776
+    },
+    "timeToInitialDisplayMs": {
+      "samples": 14,
+      "p50": 321.120625,
+      "p95": 345.124583,
+      "max": 345.124583
+    }
+  },
+  "frames": {
+    "frameDurationCpuMs": {
+      "samples": 505,
+      "p50": 4.845208,
+      "p95": 74.955104,
+      "max": 185.702812,
+      "samplesPerIteration": [
+        15,
+        31,
+        34,
+        12,
+        32,
+        34,
+        9,
+        31,
+        32,
+        8,
+        31,
+        34,
+        6,
+        31,
+        34,
+        31,
+        31,
+        30,
+        8,
+        31
+      ]
+    },
+    "frameOverrunMs": {
+      "samples": 505,
+      "p50": -10.361002,
+      "p95": 130.894519,
+      "max": 209.841336,
+      "samplesPerIteration": [
+        15,
+        31,
+        34,
+        12,
+        32,
+        34,
+        9,
+        31,
+        32,
+        8,
+        31,
+        34,
+        6,
+        31,
+        34,
+        31,
+        31,
+        30,
+        8,
+        31
+      ]
+    }
+  }
+}

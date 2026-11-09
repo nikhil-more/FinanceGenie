@@ -50,6 +50,23 @@ transaction. It can conflate intermediate revisions; it must never emit a partia
 financial group. Do not combine separate account/transaction table flows into an
 unvalidated report. Paged/filter queries are for feeds, not complete account balances.
 
+Step 6 adds a single snapshot cache per repository. Each read checks settings and
+SQLite change counters inside a Room transaction. A changed ledger revision,
+connection-local `total_changes()` or cross-connection `PRAGMA data_version`
+reloads every table. The additional counters prevent a snapshot read inside a
+rolled-back outer transaction from being reused when a later commit reaches the
+same revision. Tests cover direct nesting, dispatcher changes and a second DB
+connection. Reusing an unchanged snapshot avoids reading the same 10,000-row
+ledger again immediately before a write. Writes still validate complete before/
+after snapshots and preserve atomic history/evidence. This trades retaining one
+snapshot in memory for less repeated disk work; all mutations must continue to
+advance the revision through the repository.
+The cache follows SQLite's distinction between
+[connection-local changes](https://www.sqlite.org/c3ref/total_changes.html) and
+[commits from other connections](https://www.sqlite.org/pragma.html#pragma_data_version).
+Discard the repository when its database is closed/replaced; restore must create
+a fresh database/repository rather than reusing connection-specific cache state.
+
 For edits, preserve the record's original source/details and supply its revision:
 
 ```kotlin
