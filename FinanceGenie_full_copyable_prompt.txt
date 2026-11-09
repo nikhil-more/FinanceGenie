@@ -52,9 +52,11 @@ WORKFLOW
 4. Fix failures and rerun relevant checks. Unavailable hardware, credentials or
    services make those checks NOT RUN and the affected step BLOCKED. Continue
    independent authorized work; never declare the dependent release gate passed.
-5. Record financial/scope/data-format decisions in docs/decisions.md and update
-   plan.md plus golden fixtures together. Keep this prompt aligned on scope and
-   execution rules without copying the specification into it.
+5. Update progress_tracker.md at every step: implementation/verification status,
+   evidence, next action and tradeoffs (decision, alternative, reason, consequence,
+   revisit trigger). Record durable decisions in docs/decisions.md and detailed
+   test results in docs/verification-log.md. Update plan.md and golden fixtures
+   when financial/scope/data-format rules change. Do not duplicate the full spec.
 6. Report what changed, what was verified, remaining limitations and the next
    dependency-satisfied action. Continue through authorized steps without asking
    for repeated permission. Stop at a scope boundary or an actual external blocker,

@@ -3,15 +3,19 @@
 Recorded 9 November 2026. [plan.md](../plan.md) is the canonical financial contract
 and acceptance specification; this document records the scope being started.
 
-The current request authorizes the basic Android project foundation (Step 1),
-with the minimum Step 0 decisions needed to create it. Later features remain
-unimplemented. The app starts without sign-in, payment credentials or sensitive
+The user has started milestone A implementation and requested a maintained
+`progress_tracker.md` covering verification and tradeoffs at every step. The
+foundation, financial model, Room storage and manual-management screens are
+implemented; manual Step 4 privacy/accessibility acceptance is pending. The app
+starts without sign-in, payment credentials or sensitive
 permissions. Initial currency is INR, reporting zone Asia/Kolkata, minimum Android
-API 26. The individual test phone is not yet identified.
+API 26. The user provides a physical phone for testing; the current reference is
+an A063 running Android 15 / API 35. Device serials and personal data are not recorded.
 
-The foundation offers Overview, Transactions, Budgets and Settings navigation,
-light/dark themes, accessible text resources and empty states. It contains no
-invented financial values or nonfunctional add/import buttons. Debug and release
+The app offers Overview, Transactions, Budgets and Settings navigation, account/
+category management, manual transactions, exact basic totals, light/dark themes
+and empty/error states. Budgets/charts/imports remain their later steps. It contains
+no invented financial values or nonfunctional add/import buttons. Debug and release
 application IDs differ to isolate their data.
 
 | Journey | Implementation destination |
@@ -27,7 +31,8 @@ application IDs differ to isolate their data.
 The six plan journeys were traced to the steps above. The golden synthetic ledger
 has Bank ₹55,501, Cash ₹1,000, Card ₹0 and net spending ₹3,499. The financial
 contract defines positive transaction amounts, liability signs, atomic transfers,
-refund limits, exact paise arithmetic and reporting dates before their code exists.
+refund limits, exact paise arithmetic and reporting dates were established before
+their implementation.
 
 Bank access, payment initiation, multi-currency conversion, custom periods,
 rollover, recurrence, AI and SMS are deferred as specified in the plan. The scaffold

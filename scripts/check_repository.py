@@ -2,6 +2,7 @@
 """Small dependency-free hygiene guard, not a full formatter or secret scanner."""
 
 import hashlib
+import json
 import re
 import subprocess
 import sys
@@ -11,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WRAPPER_SHA256 = "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17"
-TEXT_SUFFIXES = {".kt", ".kts", ".xml", ".toml", ".yml", ".yaml", ".py", ".properties"}
+TEXT_SUFFIXES = {".kt", ".kts", ".xml", ".json", ".toml", ".yml", ".yaml", ".py", ".properties"}
 PRIVATE_NAMES = {"local.properties", "keystore.properties", "google-services.json", ".env"}
 PRIVATE_SUFFIXES = {".jks", ".keystore", ".pem", ".key"}
 SECRET_PATTERNS = {
@@ -47,7 +48,9 @@ def main() -> int:
             if pattern.search(content):
                 errors.append(f"{relative}: possible {label}; value withheld")
         if path.suffix in TEXT_SUFFIXES or path.name == ".editorconfig":
-            if raw and not raw.endswith(b"\n"):
+            # Room owns schema formatting and currently exports without a final newline.
+            room_schema = relative.startswith("apps/android/schemas/") and path.suffix == ".json"
+            if raw and not raw.endswith(b"\n") and not room_schema:
                 errors.append(f"{relative}: missing final newline")
             if b"\r" in raw:
                 errors.append(f"{relative}: expected LF line endings")
@@ -59,7 +62,9 @@ def main() -> int:
                 ET.fromstring(content)
             elif path.suffix == ".toml":
                 tomllib.loads(content)
-        except (ET.ParseError, tomllib.TOMLDecodeError) as error:
+            elif path.suffix == ".json":
+                json.loads(content)
+        except (ET.ParseError, tomllib.TOMLDecodeError, json.JSONDecodeError) as error:
             errors.append(f"{relative}: invalid syntax ({type(error).__name__})")
 
     wrapper = ROOT / "gradle/wrapper/gradle-wrapper.jar"

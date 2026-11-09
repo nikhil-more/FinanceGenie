@@ -2,7 +2,7 @@
 
 **Revision:** 2 — 9 November 2026
 
-**Status:** Basic Android project is created; debug/release/test APK builds, lint and fresh-source offline compilation pass. Step 0 is complete. Step 1's device verification remains blocked by the absence of an emulator/connected phone; see `docs/verification-log.md`. Later steps are not started. Proposed defaults below can be changed before their dependent step.
+**Status:** Offline Android implementation is authorized and underway. Current step status and tradeoffs are maintained in `progress_tracker.md`; actual verification evidence is in `docs/verification-log.md`. The user will provide a connected phone for device testing; an A063 running Android 15 / API 35 is currently available. Proposed defaults below can be changed before their dependent step.
 
 **Audience:** One person using a private Android app first; optional multi-device sync, web access, and Google Play distribution later.
 
@@ -41,7 +41,7 @@ These defaults preserve the original personal-use, INR-first intent. They are pl
 | Encryption | App-private database, platform storage protection, backup exclusions, optional system-authenticated app lock; no claim of application-level database encryption | Step 0 threat model; revisit before broader distribution |
 | Portable backup | User-initiated, versioned JSON; plaintext clearly disclosed. Encrypted portable backup is a separate enhancement | Step 8 |
 
-The personal test phone/Android version, initial parser packages, final application ID/signing owner, Firebase owner/region, and release destination are not supplied. Resolve each when it first affects work; they do not block this document review or unrelated offline design. If the phone cannot support the proposed baseline, adjust it before project setup.
+The user will connect their phone for testing. The currently connected test device is an A063 running Android 15 / API 35; do not record its serial number. Initial parser packages, final application ID/signing owner, Firebase owner/region, and release destination remain unresolved until their dependent steps.
 
 ### Explicit non-goals and later work
 
@@ -240,7 +240,7 @@ Firestore's offline persistence uses last-write-wins for competing changes. It i
 
 ## 6. Implementation sequence and verification gates
 
-**Current authorized scope is the basic Android foundation, Steps 0–1.** See `docs/verification-log.md` for status; Steps 2 onward are NOT STARTED. For each step: state scope → implement → run applicable checks → record evidence → advance along satisfied dependencies. An unavailable device, credential or deployment blocks the affected check/step, not unrelated work. A release gate never passes with a mandatory check unrun.
+**Current authorized scope is milestone A, Steps 0–9.** See `progress_tracker.md` for step status/tradeoffs and `docs/verification-log.md` for evidence. For each step: state scope → implement → run applicable checks → record evidence/tradeoffs → advance along satisfied dependencies. An unavailable device, credential or deployment blocks the affected check/step, not independent work. Pure JVM domain work may proceed alongside pending foundation manual device checks, with those checks still required at Gate A. The user will connect a phone when device testing is needed. A release gate never passes with a mandatory check unrun.
 
 ### Phase A — Offline Android
 
@@ -441,6 +441,8 @@ No-go conditions: wrong money/date calculations; silent data loss; duplicate inf
 
 Use `NOT STARTED`, `IN PROGRESS`, `PASS`, `BLOCKED` and `DEFERRED` for steps. Individual checks are `PASS`, `FAIL`, `NOT RUN` or `NOT APPLICABLE` with a reason. A step is `PASS` only when all mandatory checks pass; optional excluded features are `DEFERRED`, not fake passes. A blocked step may coexist with progress on an independent authorized step; do not bypass its release gate.
 
+Maintain `progress_tracker.md` after every step and status change. It owns the current dashboard, dependencies and tradeoffs: decision, alternative, reason, consequence, revisit trigger and verification link. `docs/verification-log.md` holds detailed evidence and `docs/decisions.md` holds durable decisions. Record that the user provides the physical phone for device checks; preserve pending checks without storing device serials or private data.
+
 For each implementation step append to `docs/verification-log.md`:
 
 ```text
@@ -487,4 +489,4 @@ Verify golden-query answers against the engine, deny cross-user requests, treat 
 
 The official sources linked above were reviewed on 9 November 2026. They support platform constraints, not a claim of app compliance. At Step 1 verify the compatible toolchain; at C verify Firebase/Auth/App Check providers, region, SDK cache APIs, quotas and deletion hosting; at each public release verify current target-SDK, sensitive-permission, financial-features, Data safety and account-deletion requirements. Pin actual versions in the repository only after a clean build/test.
 
-**Current next action:** Run Step 1 launch/navigation/accessibility checks on an emulator or connected phone. The requested project setup is implemented and build-verified; do not mark the device gate PASS until tested. Financial-model implementation starts at Step 2 when requested. Keep this plan and the verification log aligned with actual results.
+**Current next action:** Finish Step 1 phone verification and implement Step 2's financial model/fixtures, updating `progress_tracker.md` at each step. Continue through the authorized offline milestone as dependencies are verified. Keep pending manual checks visible and do not claim Gate A before its complete acceptance suite passes.

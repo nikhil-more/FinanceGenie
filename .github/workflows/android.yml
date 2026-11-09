@@ -38,6 +38,10 @@ jobs:
           :apps:android:lintDebug
           :apps:android:assembleDebugAndroidTest
           :apps:android:assembleRelease
+      - name: Verify exported Room schemas are committed
+        run: |
+          git diff --exit-code -- apps/android/schemas/
+          test -z "$(git ls-files --others --exclude-standard apps/android/schemas/)"
       - name: Upload build reports
         if: always()
         uses: actions/upload-artifact@v4

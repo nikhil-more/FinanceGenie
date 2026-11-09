@@ -1,5 +1,9 @@
 # Verification log
 
+Entries retain the conditions/results at the time they were recorded. Later
+follow-ups supersede earlier pending statuses; current status and step tradeoffs
+are maintained in [progress_tracker.md](../progress_tracker.md).
+
 ## Step 0 — Foundation requirements and decisions — 2026-11-09
 
 - **Implemented:** Product requirements, initial decisions, threat model and
@@ -105,3 +109,247 @@
 - **Next action:** Connect an API 26+ test device or start an emulator, run
   `:apps:android:connectedDebugAndroidTest`, install/launch and perform the manual
   checks in `e2e-acceptance.md`. Stop at this setup scope until more work is requested.
+
+## Step 1 — Physical-phone verification follow-up — 2026-11-09
+
+- **Environment:** User-provided A063, Android 15 / API 35. Serial stored only in a
+  private temporary file, never this repository. ADB used the isolated local socket
+  at `/tmp/financegenie-adb.sock` and Android user directory from the setup checks.
+- **Scope:** Existing development application and its navigation test APK. No
+  app/device data clearing or device-wide preference changes were performed.
+- **Commands:** ADB selected the connected test device; its serial argument is
+  deliberately redacted below.
+
+  ```text
+  adb -s <selected-test-device> install -r -t apps/android/build/outputs/apk/debug/android-debug.apk
+  adb -s <selected-test-device> install -r -t apps/android/build/outputs/apk/androidTest/debug/android-debug-androidTest.apk
+  adb -s <selected-test-device> shell am instrument -w -r com.financegenie.android.debug.test/androidx.test.runner.AndroidJUnitRunner
+  adb -s <selected-test-device> shell am start -W -n com.financegenie.android.debug/com.financegenie.android.MainActivity
+  ```
+
+- **Result:** Both APK installs returned Success. Instrumentation returned
+  **OK (2 tests)** in 3.926 seconds: all four top-level tabs reachable and selected
+  destination retained after activity recreation. Launch returned **Status: ok**,
+  **LaunchState: COLD**, TotalTime 862 ms. This single observation is not a p95
+  performance benchmark.
+- **Manual evidence:** Confirmed FinanceGenie was the foreground activity before
+  capturing its screen. A UI-idle screenshot was visually inspected; the user
+  separately confirmed **“Looks good; all four tabs work”** and readable text.
+- **Evidence:** `/tmp/financegenie-phone-foundation-tests.log`,
+  `/tmp/financegenie-phone-foundation-stable.png`. These are app-only temporary
+  evidence, not committed personal device screenshots/logs.
+- **Remaining checks:** Full dark/large-font/TalkBack checks belong to Step 4/Gate A;
+  actual backup/transfer behavior remains a later data-lifecycle check. No claim
+  of complete accessibility, performance or Gate A acceptance is made here.
+- **Status:** PASS for Step 1 foundation checks, superseding its earlier
+  device-unavailable status. Existing build/permission/wrapper evidence still applies.
+- **Next action:** Step 2's pure financial model; new milestone A implementation
+  request supersedes the prior setup-only scope boundary.
+
+## Step 2 — Pure financial model and golden fixtures — 2026-11-09
+
+- **Implemented:** `domain/` exact money parsing/serialization, ledger-local dates,
+  account/category/committed-event/budget/observation models, snapshot and atomic
+  edit validation, financial reports, budget remaining and statement reconciliation.
+  Shared synthetic JSON under `fixtures/ledger/`; 35 JVM tests. Fixture directory
+  is supplied by Gradle, independent of test working directory. Gson is test-only.
+- **Decisions/tradeoffs:** Recorded in `progress_tracker.md` and `decisions.md`:
+  pure economic model first, snapshot validation for clarity, exact `BigInteger`
+  accumulation with checked `Long` output, separate input ceilings and transport
+  ranges, no UI/persistence/audit scaffolding early. No financial contract changes.
+- **Actual command:**
+
+  ```bash
+  GRADLE_USER_HOME=/tmp/financegenie-gradle-home ANDROID_USER_HOME=/tmp/financegenie-android-user ./gradlew --offline --no-daemon --max-workers=2 :apps:android:testDebugUnitTest :apps:android:assembleDebug :apps:android:lintDebug :apps:android:assembleDebugAndroidTest
+  ```
+
+- **Final result:** **BUILD SUCCESSFUL in 21s**, 76 actionable tasks (25 executed,
+  one from cache, 50 up-to-date). JVM XML reports record **35 tests, zero failures,
+  zero errors**: MoneyTest 7, LedgerCalculatorTest 15, LedgerValidatorTest 11,
+  GoldenFixtureTest 2. Android lint reports **No issues found**. Debug and Android
+  instrumentation APKs compile successfully. No Android runtime is needed for
+  these financial tests.
+- **Coverage/evidence:** Exact six-event golden fixture, every stored expected KPI,
+  category/day/month totals, account positions, independent category/overall caps
+  and 25 ledger permutations; transfers, card overpayment, partial/cross-month
+  refunds, explicit unlinked refunds, archive selection/history, deletion/undo,
+  adjustment/observation semantics, future/backdated dates, leap day, India/UTC
+  boundary, clock-zone changes, input ceilings and signed 64-bit overflow.
+- **Failure resolved:** The first JVM run passed, but lint flagged five uses of
+  `BigInteger.longValueExact()` as requiring API 31. Replaced them with explicit
+  signed-64-bit bounds plus `toLong()`, preserving API 26 and overflow rejection.
+  Reran the relevant suite/build/lint successfully; no suppression/baseline added.
+- **Repository checks:** `python3 scripts/check_repository.py` and
+  `git diff --check` passed. Hygiene checks now validate JSON syntax as well as
+  XML/TOML, so shared fixture corruption is caught in CI. Fixtures contain only
+  synthetic stable IDs/names and integer-string money; no phone serial or private data.
+- **Artifacts:** `/tmp/financegenie-step2-checks.log`,
+  `apps/android/build/test-results/testDebugUnitTest/TEST-*.xml`,
+  `apps/android/build/reports/tests/testDebugUnitTest/index.html`,
+  `apps/android/build/reports/lint-results-debug.html`.
+- **Limitations:** Calculations are not yet wired into screens or a database.
+  Performance targets are not yet benchmarked; neither Gate A nor storage/recovery
+  verification is complete. Existing user-visible UI remains the foundation.
+- **Status:** PASS for Step 2.
+- **Next action:** Step 3 Room schema, repositories, atomic edits and physical-phone
+  storage/reopen verification. Update the tracker and tradeoffs as that work proceeds.
+
+## Step 3 — Room persistence and atomic operations — 2026-11-09
+
+- **Implemented:** Ten-table schema v1; UUID/calendar/instant converters; integer
+  money; foreign keys/indexes; normalized provenance and batch bookkeeping;
+  revision-checked account/category/budget/observation/event repositories;
+  transactional event groups and undo; consistent Flow snapshots; bounded,
+  deterministic date/account/category/search queries. No UI wiring, cloud or
+  notification collection was added. See `local-data.md` for the API boundary.
+- **Build command:**
+
+  ```bash
+  GRADLE_USER_HOME=/tmp/financegenie-gradle-home ANDROID_USER_HOME=/tmp/financegenie-android-user ./gradlew --no-daemon --max-workers=2 :apps:android:testDebugUnitTest :apps:android:assembleDebug :apps:android:lintDebug :apps:android:assembleDebugAndroidTest :apps:android:assembleRelease
+  ```
+
+- **Build result:** PASS — **BUILD SUCCESSFUL in 52s**; 128 actionable tasks,
+  77 executed, five from cache, 46 up-to-date. All **35 financial JVM tests pass**
+  without failures/errors. Debug, unsigned release and instrumentation APKs build;
+  lint reports **No issues found**. One initial offline run needed an uncached
+  transitive coroutine-test JAR; the dependency was downloaded from its public
+  repository and the complete command above passed.
+- **Schema verification:** Room plugin exported
+  `apps/android/schemas/com.financegenie.android.data.local.FinanceGenieDatabase/1.json`.
+  Parsed JSON assertions confirmed version 1, ten tables, INTEGER money fields,
+  unique `(month, scope_key)` budget index and no raw-message-body column in the
+  primary transaction table. This is initial schema creation/reopen, not an upgrade
+  migration. Future real upgrades require populated-fixture preservation tests.
+- **Phone command:**
+
+  ```bash
+  ANDROID_USER_HOME=/tmp/financegenie-android-user ADB_SERVER_SOCKET=localfilesystem:/tmp/financegenie-adb.sock python3 -u scripts/verify_storage_on_device.py
+  ```
+
+- **Phone results:** PASS on the user's A063 / Android 15 / API 35. Installs used
+  `-r -t`; the storage package returned **OK (17 tests)** in 0.783 seconds: 15 Room
+  repository/DAO cases plus two persistence seed/reopen cases. The separate probe
+  then ran seed-only instrumentation (**OK (1 test)**), force-stopped only
+  `com.financegenie.android.debug`, and ran verify-only instrumentation with
+  `requireFreshProcess=true` (**OK (1 test)**). The reader asserted a different
+  process ID and the same local ledger ID/revision, one-paise event, notes,
+  provenance and exact report. Test-owned files/preferences were removed afterward.
+- **Coverage:** Exact small/large/signed values and nanosecond event timestamps;
+  duplicate IDs and source keys; stale/concurrent edits; soft delete/undo and stale
+  undo rejection; out-of-order linked groups and invalid-edit rollback; foreign-key
+  history protection; archive behavior; nullable overall-budget uniqueness;
+  paging, half-open date/account/category filters and literal wildcard search;
+  transactional Flow state; shared golden totals after DB round-trip; real file
+  reopen and process restart. No test uses or clears the production ledger.
+- **Launch:** PASS — driver relaunched FinanceGenie Dev with **Status: ok**,
+  TotalTime 837 ms (a single observation, not a performance benchmark).
+- **Privacy/artifacts:** Debug and release APK inspection confirmed no internet or
+  sensitive permission, no bundled baseline financial fixture, unchanged backup
+  disablement and a non-exported Room service. Only the AndroidX signature-scoped
+  internal permission is present. The phone log was checked for absence of its
+  serial; no device content or real financial record is committed.
+- **Repository/CI:** `python3 scripts/check_repository.py`, `git diff --check` and
+  schema JSON assertions pass. CI now verifies exported schema changes are
+  committed; this workflow change has not been run remotely in the current work.
+  Generator formatting/expected embedded-payload warnings are narrowly handled
+  as documented in `decisions.md`, without suppressing live schema validation.
+- **Evidence:** `/tmp/financegenie-step3-checks.log`,
+  `/tmp/financegenie-step3-phone.log`, generated schema v1, JVM reports under
+  `apps/android/build/test-results/testDebugUnitTest/`, lint reports and
+  `scripts/verify_storage_on_device.py` for reproducibility.
+- **Limitations:** The UI still uses foundation screens. Full data entry/management,
+  app lock, performance benchmarks and backup/restore remain their planned steps.
+  This database is app-private, not claimed to be application-encrypted. No
+  migration path is falsely claimed before a real version upgrade exists.
+- **Status:** PASS for Step 3.
+- **Next action:** Step 4 account/category management and manual transaction
+  create/edit/delete/undo wired to this repository, verified on the phone.
+
+## Step 4 — Manual entry, management and privacy — 2026-11-09
+
+- **Implemented:** Application-scoped repository; lifecycle-aware ViewModels;
+  account/category create/edit/archive/unarchive; opening positions and statement
+  observations; manual expense/income/transfer/refund/adjustment forms; exact basic
+  Overview totals; search/date/account/category/deleted filters; original source
+  labels; soft deletion, grouped linked-refund deletion, undo and restoration.
+  System device-credential app lock, configurable timeout and default screenshot/
+  preview protection are wired without new sensitive permissions or a schema change.
+- **Build/check command:**
+
+  ```bash
+  GRADLE_USER_HOME=/tmp/financegenie-gradle-home ANDROID_USER_HOME=/tmp/financegenie-android-user ./gradlew --offline --no-daemon --max-workers=2 :apps:android:testDebugUnitTest :apps:android:assembleDebug :apps:android:assembleDebugAndroidTest :apps:android:lintDebug :apps:android:assembleRelease
+  ```
+
+- **Automated build results:** Final combined command passes in 9 seconds (128
+  tasks: five executed, 123 up-to-date). 45 JVM tests pass with zero failures/errors/skips:
+  the existing 35 financial cases and ten lock-session cases. Debug, unsigned
+  release and instrumentation APKs build, and Android lint reports no issues.
+  Repository hygiene and `git diff --check` pass. Packaged debug/release permissions
+  contain no network/sensitive permission or bundled financial fixture.
+- **Phone command:**
+
+  ```bash
+  ADB_SERVER_SOCKET=localfilesystem:/tmp/financegenie-adb.sock python3 scripts/verify_storage_on_device.py --ui-only
+  ```
+
+- **Phone results:** PASS on A063 / Android 15 / API 35 — **OK (12 tests)** in
+  77.931 seconds: two navigation/recreation, one account/category management,
+  five financial-entry, two privacy/session/flag, one large-font/theme and one
+  failure/retry test. The initial combined `--ui` run separately passed all 17
+  storage tests and the storage fresh-process seed/verify stages before UI fixes.
+  Storage schema/operations were unchanged by these UI fixes.
+- **CRUD coverage:** ₹249.50 Food expense → edit to ₹199.50 → rotate while editing
+  → save → delete/undo → delete/restore → search/account/category filters → recreate.
+  Missing account, excess decimals, future date, stale revision and same-frame
+  double-save are tested. Account and category edits retain their archive state;
+  statement observations preserve a negative card position; card debt has the
+  **Amount owed** label. Unlinked refunds require explicit confirmation; archived
+  choices cannot be newly selected, while historical references remain editable.
+- **Golden journey:** The test reads the shared fixture's six event kinds, dates,
+  amounts, accounts, categories and refund link, submitting each through the UI.
+  Independent expectations confirm net spending 349,900 paise, income 6,000,000,
+  Bank 5,550,100, Cash 100,000 and Card 0. An adjustment changes only the relevant
+  position. Reducing the linked purchase below refunded value is rejected, and
+  purchase/refund deletion plus undo is atomic. Manual corrections preserve CSV
+  origin labels; no CSV ingestion UI is introduced before Step 7.
+- **Fresh-process UI read:** Seed-only instrumentation records a ₹199.50 expense
+  through the UI (**OK (1 test)**, 7.055s). The driver force-stops only FinanceGenie
+  Dev, then reader-only instrumentation asserts a different process and the same
+  ₹199.50 Overview value/record (**OK (1 test)**, 2.954s). Probe-owned files are
+  removed afterward. App launch returns **Status: ok**, cold TotalTime 1053ms
+  (one observation, not a benchmark).
+- **Privacy automation:** Cold lock screen excludes financial navigation semantics;
+  injected test-only grant/cancellation, immediate timeout, background hiding and
+  rotation/session retention pass. Tests inspect actual window `FLAG_SECURE` at
+  default, after explicit sharing enablement, and after locking. A failed read
+  leaves Settings available and retry genuinely restarts repository observation.
+  These session-policy seams do not claim to verify an Android device credential.
+- **Accessibility/layout:** Compose-local font scale 2.0 in dark mode permits all
+  four tabs, selection, a multi-field adjustment form and Save. The test then
+  renders light mode at scale 1.0. Synthetic captures under the test app cache were
+  retrieved to `/tmp` and visually inspected; no image or phone serial is committed.
+  Real TalkBack and global/OEM accessibility behavior remain manual checks.
+- **Resolved findings:** Fixed a deferred state read that prevented immediate
+  window-policy updates. Undo confirmations now have an explicit finite timeout.
+  UI tests dismiss transient confirmations and close the keyboard before subsequent
+  row/save actions, and assert actual data/UI completion rather than sleeping.
+  An erroneous test import, a text-field label/value assertion and test-only
+  StateFlow composition access were corrected; the final suite passes unchanged
+  financial expectations and without skipped mandatory cases.
+- **Isolation/evidence:** All phone tests inject in-memory/test-named storage and
+  dedicated preference files before launching the activity. No `pm clear`, real
+  ledger wipe, device-setting change or broad device log/screenshot is used.
+  Evidence is `/tmp/financegenie-step4-final-checks.log`,
+  `/tmp/financegenie-step4-phone.log` (storage results),
+  `/tmp/financegenie-step4-phone-ui-final.log`, JVM/lint reports and repository
+  test/driver sources. These results were collected locally; remote CI was not
+  part of this verification run.
+- **Mandatory manual checks:** NOT YET CONFIRMED — real Android device-credential
+  enable/unlock/cancel and background timeout; screenshot/recent-app OEM behavior;
+  TalkBack spoken labels, focus and actions. The updated app is installed/open on
+  the user's phone, and these checks have been requested explicitly. Only the user
+  enters a credential or changes global accessibility settings.
+- **Status:** Implementation/automated checks PASS; Step 4 overall IN PROGRESS
+  pending those manual results. Gate A is not passed. Calendar-budget management,
+  charts/performance, portable recovery and actual backup behavior retain their
+  later planned gates.

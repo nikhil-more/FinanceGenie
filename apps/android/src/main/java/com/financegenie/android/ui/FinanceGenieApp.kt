@@ -1,126 +1,139 @@
 package com.financegenie.android.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.financegenie.android.R
+import com.financegenie.android.privacy.PrivacyUiState
+import com.financegenie.android.privacy.PrivacyViewModel
 import com.financegenie.android.ui.navigation.TopLevelDestination
-import com.financegenie.android.ui.theme.FinanceGenieTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FinanceGenieApp() {
+fun FinanceGenieApp(model: LedgerViewModel, privacy: PrivacyUiState, privacyModel: PrivacyViewModel, authenticate: (Boolean) -> Unit) {
+    val state by model.state.collectAsStateWithLifecycle()
+    val editor by model.editor.collectAsStateWithLifecycle()
+    val formError by model.formError.collectAsStateWithLifecycle()
+    val busy by model.busy.collectAsStateWithLifecycle()
+    val deleting by model.deleting.collectAsStateWithLifecycle()
+    val notice by model.notice.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route
-
+    val route = backStackEntry?.destination?.route ?: "overview"
+    val nested = route == "accounts" || route == "categories"
+    val snackbars = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    LaunchedEffect(notice?.id) {
+        notice?.let {
+            val result = snackbars.showSnackbar(context.getString(it.message),
+                actionLabel = if (it.undoGroup != null) context.getString(R.string.undo) else null,
+                duration = if (it.undoGroup != null) SnackbarDuration.Long else SnackbarDuration.Short,
+                withDismissAction = true)
+            if (result == SnackbarResult.ActionPerformed) model.undo(it) else model.consumeNotice(it.id)
+        }
+    }
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.app_name)) })
-        },
+        topBar = { TopAppBar(title = { Text(stringResource(when (route) {
+            "accounts" -> R.string.manage_accounts
+            "categories" -> R.string.manage_categories
+            else -> R.string.app_name
+        })) }, navigationIcon = {
+            if (nested) TextButton(onClick = { navController.popBackStack() }, modifier = Modifier.testTag("back")) { Text(stringResource(R.string.back)) }
+        }) },
         bottomBar = {
             NavigationBar {
                 TopLevelDestination.entries.forEach { destination ->
-                    NavigationBarItem(
-                        modifier = Modifier.testTag("tab_${destination.route}"),
-                        selected = currentRoute == destination.route,
+                    NavigationBarItem(modifier = Modifier.testTag("tab_${destination.route}"),
+                        selected = route == destination.route || (nested && destination == TopLevelDestination.Settings),
                         onClick = {
                             navController.navigate(destination.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                 launchSingleTop = true
                                 restoreState = true
                             }
-                        },
-                        icon = {
-                            Icon(destination.icon, contentDescription = null)
-                        },
-                        label = { Text(stringResource(destination.label)) },
-                    )
+                        }, icon = { Icon(destination.icon, contentDescription = null) }, label = { Text(stringResource(destination.label)) })
                 }
             }
         },
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = TopLevelDestination.Overview.route,
-            modifier = Modifier.padding(innerPadding),
-        ) {
-            TopLevelDestination.entries.forEach { destination ->
-                composable(destination.route) {
-                    EmptyDestination(destination)
-                }
+        floatingActionButton = {
+            if ((route == "overview" || route == "transactions") && state.ledger != null) {
+                Button(onClick = model::newTransaction, enabled = !busy, modifier = Modifier.testTag("add_transaction")) { Text(stringResource(R.string.add_transaction)) }
             }
+        },
+        snackbarHost = { SnackbarHost(snackbars, modifier = Modifier.testTag("ledger_snackbar")) },
+    ) { padding ->
+        NavHost(navController, startDestination = "overview", modifier = Modifier.padding(padding)) {
+            composable("overview") { LedgerContent(state, model::retry) { OverviewScreen(state, model) { navController.navigate("accounts") } } }
+            composable("transactions") { LedgerContent(state, model::retry) { TransactionsScreen(state, model) } }
+            composable("budgets") { BudgetsPlaceholder() }
+            composable("settings") { SettingsScreen(privacy, privacyModel, authenticate,
+                accounts = { navController.navigate("accounts") }, categories = { navController.navigate("categories") }) }
+            composable("accounts") { LedgerContent(state, model::retry) { AccountsScreen(state, model) } }
+            composable("categories") { LedgerContent(state, model::retry) { CategoriesScreen(state, model) } }
         }
     }
+    if (editor != null && state.ledger != null) key(editor!!.id) {
+        LedgerForm(editor!!, state.ledger!!, formError, busy, model::updateEditor, model::saveEditor, model::closeEditor)
+    }
+    if (deleting.isNotEmpty()) AlertDialog(onDismissRequest = model::cancelDelete,
+        title = { Text(stringResource(R.string.delete_title)) },
+        text = { Text(stringResource(if (deleting.size > 1) R.string.delete_linked_help else R.string.delete_help)) },
+        confirmButton = { TextButton(onClick = model::confirmDelete, enabled = !busy, modifier = Modifier.testTag("confirm_delete")) {
+            Text(stringResource(if (deleting.size > 1) R.string.delete_linked_action else R.string.delete))
+        } },
+        dismissButton = { TextButton(onClick = model::cancelDelete, enabled = !busy) { Text(stringResource(R.string.cancel)) } })
 }
 
-@Composable
-private fun EmptyDestination(destination: TopLevelDestination) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Icon(
-            imageVector = destination.icon,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = stringResource(destination.emptyTitle),
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.semantics { heading() },
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(destination.emptyDescription),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+@Composable private fun BudgetsPlaceholder() {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(stringResource(R.string.budgets_empty_title), style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.budgets_empty_description))
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-private fun FinanceGeniePreview() {
-    FinanceGenieTheme {
-        FinanceGenieApp()
+fun LockedScreen(state: PrivacyUiState, unlock: () -> Unit) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 64.dp).testTag("locked_screen"),
+        verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(stringResource(R.string.unlock_title), style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.unlock_description))
+        Button(onClick = unlock, enabled = !state.authenticating, modifier = Modifier.testTag("unlock")) {
+            Text(stringResource(if (state.authenticating) R.string.authenticating else R.string.unlock))
+        }
+        state.error?.let { ErrorText(it) }
     }
 }

@@ -13,3 +13,7 @@ indent_size = 2
 
 [gradlew.bat]
 end_of_line = crlf
+
+[apps/android/schemas/**/*.json]
+indent_size = 2
+insert_final_newline = false
