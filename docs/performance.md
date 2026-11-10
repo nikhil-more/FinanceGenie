@@ -9,7 +9,8 @@ the benchmark deliberately matches that baseline rather than claiming future
 distribution-build performance.
 
 The benchmark source set supplies its own Application/container, fixed November
-2026 clock and synthetic-only `performance-fixture.db`. A same-signature permission
+2026 clock and synthetic-only `performance-fixture-ledger.db`, using the production
+profile-store lifetime. A same-signature permission
 protects its setup activity. These classes, the setup route and synthetic data
 builder are excluded from debug/release APKs. The separate benchmark driver is
 also signed with the local debug key. No bank, user credential or notification
@@ -49,8 +50,9 @@ content is accessed.
   rendered and Compose reports idle. This includes test synchronization/polling
   overhead. End state is checked for 10,030 events, avoiding successful-looking
   timings for missing writes.
-  This is the manual-expense baseline; budget-save latency is a separate Gate A
-  check and is not inferred from these measurements.
+  Thirty budget edits then measure Save to the exact updated limit and remaining
+  amount. The final persisted limit is ₹5,030 at revision 31. These samples are
+  reported separately from expense-save timings.
 - P50/P95 use the nearest-rank method. Sample arrays are retained in aggregate
   reports. Process PSS is sampled between operations; the maximum sample is a
   baseline rather than a continuously measured absolute memory peak. APK bytes
@@ -108,9 +110,9 @@ driver and test APKs. On the A063 / API 35:
 
 The confirmed endpoint includes broadcast delivery, process checks and UIAutomator
 verification. The committed-frame result does not replace the failed confirmation
-target or establish a twenty-run TTFD result. Startup instrumentation/confirmation
-hardening and budget-save timing remain Gate A work. The two-second target has not
-been relaxed. Expense Save improved from the initial 445 ms measurement while
+target or establish a twenty-run TTFD result. This historical run left startup
+confirmation and budget-save timing open. The two-second target has not been
+relaxed. Expense Save improved from the initial 445 ms measurement while
 retaining exact financial validation and atomic writes.
 
 The measured APK is 7,163,426 bytes (6.83 MiB); maximum sampled process PSS is
@@ -122,6 +124,45 @@ per-launch frame/presentation guarantee or a universal smoothness pass.
 After measurement, one benchmark-owned diagnostic trace was retained in `/tmp`,
 and the three synthetic benchmark packages were uninstalled from the phone.
 FinanceGenie Dev was reopened with its ledger/preferences retained.
+
+## Gate A measurements — 10 November 2026
+
+The [current reviewed report](performance-gate-a.json) retains twenty startup
+samples and thirty samples for every operation, including budget edits.
+
+| Measurement | P95 | Target | Outcome |
+|---|---:|---:|---|
+| Launch to UI-confirmed Overview | 775.52 ms | ≤2,000 ms | Pass |
+| Launch to committed frame | 699.46 ms | Diagnostic only | Recorded |
+| Monthly summary including uncached snapshot read | 185.79 ms | ≤300 ms | Pass |
+| Bounded 50-row search | 2.74 ms | ≤500 ms | Pass |
+| Expense Save to visible updated value | 296.89 ms | ≤300 ms | Pass |
+| Budget Save to visible updated limit/remaining | 314.52 ms | ≤300 ms initially | User accepted ~315 ms for individual use |
+
+The startup driver now sets UIAutomator's generic idle timeout to zero for its
+measurements and restores it afterward. Nonce, new PID, committed-frame, exact
+visible-value and foreground checks still determine readiness. The difference
+from 2,278.64 ms corrects automation overhead; it does not establish an application
+startup speedup. Standard AndroidX TTID/TTFD remains incomplete at fourteen of
+twenty and is retained as a separate diagnostic, never filled with inferred values.
+
+The original 300 ms budget target remains false in the report. On 10 November the
+user explicitly accepted the measured 314.52 ms baseline for this personal app.
+No extra calculation cache was adopted. The expense/startup targets remain intact;
+revisit a material regression from this budget baseline.
+
+The target APK is 7,429,034 bytes (7.09 MiB). Maximum sampled process PSS is
+527,626 KiB (515.3 MiB), compared with the earlier 268,819 KiB. This is a longer
+instrumented workload that also performs thirty budget edits and keeps the
+profile store active; it is not a controlled production-only memory comparison.
+The app's financial calculation path is unchanged. Retain both observations and
+investigate memory again if normal use shows pressure or a comparable workload
+regresses. Neither sampled PSS nor incomplete frame traces establish a universal
+memory or smoothness guarantee.
+
+The report hashes identify the measured APKs. Later test-only assertions that the
+matched expense/budget text is displayed are not retroactive measurements of a
+different test APK.
 
 ## Build and run
 

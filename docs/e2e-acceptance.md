@@ -127,3 +127,22 @@ Step 8 acceptance on the same phone:
 
 Step 8 is PASS. Gate A still requires its startup/trace, budget-save, full-app
 accessibility, supported-device and actual OS backup checks in Step 9.
+
+Step 9 acceptance (10 November 2026; supersedes the older timing/check status):
+
+- [x] Twenty process-cold launches confirm exact loaded Overview values at
+  775.52 ms P95, below two seconds. Generic UIAutomator idle overhead is removed;
+  incomplete AndroidX TTID/TTFD remains a separate diagnostic.
+- [x] Thirty summary/search/expense-save measurements meet their original targets.
+- [x] Thirty budget edits measure 314.52 ms P95, explicitly accepted by the user
+  at approximately 315 ms for individual use. The original 300 ms miss is retained.
+- [x] Actual cloud/device-transfer framework extraction excludes all candidate
+  private data on API 35; all six markers appear in the positive control.
+- [x] Release/candidate artifacts contain no test data/hooks or sensitive/network
+  permissions; the phone's backup setting and normal Dev data are preserved.
+- [ ] Non-debuggable production-container golden UI journey and fresh-process read.
+- [ ] API 26/34 CI drivers complete successfully.
+- [ ] Full-app human TalkBack and release-like lock/screen-protection walkthrough.
+
+Gate A is IN PROGRESS. See [offline acceptance](offline-acceptance.md) for isolated
+builds, exact expected totals, reproduction and backup-test limitations.

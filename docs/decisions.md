@@ -380,3 +380,32 @@ References checked for this implementation:
 - **Revisit:** Real schema upgrades, larger recovery-volume measurements or a
   separately scoped encrypted portable-backup requirement. Individual local use
   does not require accounts/sign-in, teams, roles or cloud infrastructure.
+
+## 2026-11-10 — Step 9 personal-use acceptance tradeoffs
+
+- **Budget save:** The user accepted the measured 314.52 ms P95 (~315 ms) across
+  thirty budget edits for individual use. Keep the original 300 ms target marked
+  missed and record this explicit exception. Retain the existing financial engine;
+  do not add a second report cache for this small difference. Expense/startup
+  targets are unchanged. Revisit material regression from this measured baseline.
+- **Startup measurement:** Disable only the benchmark driver's generic UIAutomator
+  idle waiting and restore it afterward. Committed frame, launch nonce, fresh PID,
+  exact visible values and foreground identity still determine readiness. The
+  twenty-run 775.52 ms P95 is a direct confirmation metric, not an application
+  speedup or twenty-run AndroidX TTFD. Preserve the earlier incomplete trace data.
+- **Candidate isolation:** A separately labelled, locally signed non-debuggable
+  acceptance build uses the production container. Uninstall/restart/recovery
+  checks operate only on this disposable package. Normal Dev data is preserved;
+  no distribution signing or publication is implied.
+- **Backup evidence:** Exercise real framework extraction with synthetic CE/DE
+  file, preference and SQLite canaries and a permissive positive-control package.
+  Reflection permission is process-scoped instrumentation plumbing only. Do not
+  enable/switch the phone's backup transport. This verifies filtering, without
+  claiming an unperformed physical OEM migration or cloud restore.
+- **API coverage:** Use disposable API 26/34 CI emulators because this workspace
+  has no KVM/system images and limited disk. Physical API 35 performance and human
+  TalkBack/device-credential checks remain separate evidence. Request supported
+  SDK packages explicitly; the setup action's v3 default includes removed `tools`.
+- **Revisit:** Normal-use memory pressure, an Android/toolchain/schema upgrade,
+  a changed OEM backup implementation or separately authorized distribution.
+  The current scope remains one person's local ledger.

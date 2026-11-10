@@ -58,10 +58,10 @@ class UiRestartTest {
     @Test fun a_saveExpenseThroughUi() {
         compose.waitTag("add_transaction")
         compose.addEvent(TransactionKind.EXPENSE, "199.50", "Synthetic Restart Lunch")
-        compose.onNodeWithTag("metric_spending").assertTextEquals("₹199.50")
+        compose.onNodeWithTag("metric_spending").assertMoneyEquals("₹199.50")
         compose.onNodeWithTag("tab_budgets").performClick()
         compose.addBudget("500")
-        compose.budgetNode("budget_remaining_overall").assertTextEquals("₹300.50")
+        compose.budgetNode("budget_remaining_overall").assertMoneyEquals("₹300.50")
         check(markers.edit().putInt("writer_pid", Process.myPid()).commit())
     }
 
@@ -70,11 +70,11 @@ class UiRestartTest {
             assertNotEquals(markers.getInt("writer_pid", -1), Process.myPid())
         }
         compose.waitTag("add_transaction")
-        compose.onNodeWithTag("metric_spending").assertTextEquals("₹199.50")
+        compose.onNodeWithTag("metric_spending").assertMoneyEquals("₹199.50")
         assertEquals(19_950L, runBlocking { repository.read().transactions.single().transaction.amountMinor })
         compose.onNodeWithTag("tab_budgets").performClick()
-        compose.budgetNode("budget_limit_overall").assertTextEquals("₹500.00")
-        compose.budgetNode("budget_remaining_overall").assertTextEquals("₹300.50")
+        compose.budgetNode("budget_limit_overall").assertMoneyEquals("₹500.00")
+        compose.budgetNode("budget_remaining_overall").assertMoneyEquals("₹300.50")
         assertEquals(50_000L, runBlocking { repository.read().budgets.single().value.limitMinor })
         compose.onNodeWithTag("tab_transactions").performClick()
         compose.field("search_transactions", "Restart Lunch")

@@ -16,7 +16,11 @@ acceptance have passed. Step 7 adds bounded CSV mapping/preview, explicit
 classification/matching, atomic import and replay-protected batch undo/restore.
 Step 8 adds personal JSON backup/restore, a separate safe CSV report and confirmed
 local deletion, with isolated staging before replacing the current local ledger.
-Startup measurement limits remain explicit Gate A work. The app
+Step 9 adds release-like acceptance and supported-API CI coverage. Current direct
+startup confirmation passes the two-second target; AndroidX trace extraction
+remains incomplete. The user accepted the measured approximately 315 ms budget
+save for individual use. Full-app human review remains an explicit Gate A check.
+The app
 starts without sign-in, payment credentials or sensitive
 permissions. Initial currency is INR, reporting zone Asia/Kolkata, minimum Android
 API 26. The user provides a physical phone for testing; the current reference is

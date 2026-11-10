@@ -122,8 +122,8 @@ class CsvUiTest {
         val id = committed.importBatches.single().id
         assertEquals(83, committed.transactions.size)
         compose.onNodeWithTag("tab_overview").performClick()
-        compose.waitUntil(15_000) { compose.onAllNodes(hasTestTag("metric_spending") and hasText("₹765.50")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("metric_spending").assertTextEquals("₹765.50")
+        compose.waitUntil(15_000) { compose.onAllNodes(hasTestTag("metric_spending") and hasMoneyText("₹765.50")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("metric_spending").assertMoneyEquals("₹765.50")
         compose.openCsv()
         compose.batchAction(id)
         compose.waitUntil(15_000) { runBlocking { data.repository.read().importBatches.single().isUndone } }

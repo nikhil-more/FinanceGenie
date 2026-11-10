@@ -115,9 +115,12 @@ Manually check dark mode, rotation, back navigation, 200% font size and TalkBack
 The user supplies a connected physical phone for device tests; the current
 reference phone is an A063 running Android 15 / API 35. Record test outcomes and
 tradeoffs in `progress_tracker.md`; never commit a device serial or personal data.
-CI builds the app and test APK and runs lint/repository checks; connected UI tests
-and device launch remain a separate required verification gate. A release APK from
-this setup is unsigned; production signing and distribution are not configured.
+CI builds the app/test APKs, runs JVM/lint/repository checks, and runs the device
+drivers on API 26 and API 34 emulators. Physical-phone performance and human
+accessibility remain separate checks. The isolated non-debuggable candidate and
+actual framework backup-extraction checks are described in
+[offline acceptance](docs/offline-acceptance.md). A release APK from this setup is
+unsigned; production signing and distribution are not configured.
 
 ## Pinned foundation
 
@@ -145,8 +148,10 @@ records, network integration or sensitive permission request. Cloud sync,
 notification access and AI are not configured.
 It is for individual use, with one person's own accounts and private ledger.
 Team spaces, organizational roles and business administration are outside scope.
-OS cloud/device-transfer backup exclusions are explicit; actual device behavior
-must still be verified. The app has no application-level database encryption.
+OS cloud/device-transfer backup exclusions are explicit. Actual framework
+extraction on the API 35 reference phone excludes all synthetic private data, with
+a working positive control; a physical OEM migration/cloud restore is untested.
+The app has no application-level database encryption.
 User-selected JSON/CSV exports are plaintext, with an explicit disclosure before
 the save picker. Optional app lock uses the Android device credential; screen
 protection is enabled by default. See [the entry/privacy guide](docs/manual-entry.md)
@@ -165,5 +170,6 @@ signing keys or service credentials. Use synthetic data for later tests.
 - [Personal JSON recovery, CSV report and local deletion](docs/backup-recovery.md)
 - [Performance methodology and reproduction](docs/performance.md)
 - [Acceptance checklist](docs/e2e-acceptance.md)
+- [Release-like offline acceptance and backup checks](docs/offline-acceptance.md)
 
 Licensed under [Apache License 2.0](LICENSE).

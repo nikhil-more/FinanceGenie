@@ -495,4 +495,8 @@ Verify golden-query answers against the engine, deny cross-user requests, treat 
 
 The official sources linked above were reviewed on 9 November 2026. They support platform constraints, not a claim of app compliance. At Step 1 verify the compatible toolchain; at C verify Firebase/Auth/App Check providers, region, SDK cache APIs, quotas and deletion hosting; at each public release verify current target-SDK, sensitive-permission, financial-features, Data safety and account-deletion requirements. Pin actual versions in the repository only after a clean build/test.
 
-**Current next action:** Finish Step 1 phone verification and implement Step 2's financial model/fixtures, updating `progress_tracker.md` at each step. Continue through the authorized offline milestone as dependencies are verified. Keep pending manual checks visible and do not claim Gate A before its complete acceptance suite passes.
+**Current next action:** Finish Step 9 offline acceptance with release-like phone,
+supported-API CI and full-app human checks; Steps 0–8 are complete. Keep
+`progress_tracker.md` and verification evidence current. Do not claim Gate A
+before its required acceptance checks pass or an explicit user exception is
+recorded. Optional notification/sync/web scope follows its own milestone decisions.

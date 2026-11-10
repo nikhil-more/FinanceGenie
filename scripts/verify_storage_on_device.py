@@ -46,7 +46,7 @@ def main() -> int:
     def adb(label: str, arguments: list[str]) -> str:
         print(label, flush=True)
         try:
-            result = subprocess.run([args.adb, "-s", serial, *arguments], capture_output=True, text=True, timeout=180)
+            result = subprocess.run([args.adb, "-s", serial, *arguments], capture_output=True, text=True, timeout=600)
         except subprocess.TimeoutExpired:
             raise RuntimeError(f"{label}: device command timed out") from None
         output = result.stdout.replace(serial, "<test-device>")

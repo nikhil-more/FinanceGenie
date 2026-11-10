@@ -1,5 +1,6 @@
 package com.financegenie.android
 
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasTestTag
@@ -29,13 +30,14 @@ internal fun ComposeContentTestRule.overviewNode(tag: String) = onNodeWithTag("o
 
 internal fun ComposeContentTestRule.analyticsValue(tag: String, expected: String) {
     overviewNode(tag)
+    val matches = if ('₹' in expected) hasMoneyText(expected) else hasText(expected)
     try {
-        waitUntil(15_000) { onAllNodes(hasTestTag(tag) and hasText(expected)).fetchSemanticsNodes().isNotEmpty() }
+        waitUntil(15_000) { onAllNodes(hasTestTag(tag) and matches).fetchSemanticsNodes().isNotEmpty() }
     } catch (error: Exception) {
         val actual = onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().map { it.config[androidx.compose.ui.semantics.SemanticsProperties.Text] }
         throw AssertionError("Expected $tag to show $expected; actual synthetic values: $actual", error)
     }
-    onNodeWithTag(tag).assertTextEquals(expected)
+    onNodeWithTag(tag).assert(matches)
 }
 
 internal fun ComposeContentTestRule.openAnalyticsFilters() {
@@ -99,8 +101,8 @@ class AnalyticsUiTest {
         compose.waitNoTag("transaction_${fixtureEventId(103)}")
         compose.onNodeWithTag("transaction_${fixtureEventId(102)}").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("tab_budgets").performClick()
-        compose.budgetNode("budget_remaining_overall").assertTextEquals("₹1,501.00")
-        compose.budgetNode("budget_remaining_category:groceries").assertTextEquals("₹3,000.00")
+        compose.budgetNode("budget_remaining_overall").assertMoneyEquals("₹1,501.00")
+        compose.budgetNode("budget_remaining_category:groceries").assertMoneyEquals("₹3,000.00")
         compose.onNodeWithTag("tab_overview").performClick()
         compose.overviewNode("search_transactions")
         compose.field("search_transactions", "100%_literal")
@@ -118,8 +120,8 @@ class AnalyticsUiTest {
         compose.analyticsValue("day_value_2026-11-02", "₹2,000.00")
         compose.analyticsValue("month_value_2026-11", "₹3,248.25")
         compose.onNodeWithTag("tab_budgets").performClick()
-        compose.budgetNode("budget_remaining_overall").assertTextEquals("₹1,751.75")
-        compose.budgetNode("budget_remaining_category:groceries").assertTextEquals("₹3,250.75")
+        compose.budgetNode("budget_remaining_overall").assertMoneyEquals("₹1,751.75")
+        compose.budgetNode("budget_remaining_category:groceries").assertMoneyEquals("₹3,250.75")
     }
 
     @Test fun monthAndAllDateFiltersKeepHistoricalActivityAndCurrentPositionsDistinct() {

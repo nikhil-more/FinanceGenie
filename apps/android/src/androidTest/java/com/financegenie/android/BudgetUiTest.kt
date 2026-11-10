@@ -47,22 +47,22 @@ class BudgetUiTest {
         compose.onNodeWithTag("tab_transactions").performClick()
         compose.addEvent(TransactionKind.EXPENSE, "4000", "Synthetic Budget Food")
         compose.onNodeWithTag("tab_budgets").performClick()
-        compose.budgetNode("budget_remaining_overall").assertTextEquals("₹1,000.00")
+        compose.budgetNode("budget_remaining_overall").assertMoneyEquals("₹1,000.00")
         compose.budgetNode("budget_warning_category:food").assertTextEquals("Approaching limit")
         compose.onNodeWithTag("tab_transactions").performClick()
         compose.addEvent(TransactionKind.EXPENSE, "1500", "Synthetic Extra Food")
         compose.onNodeWithTag("tab_budgets").performClick()
-        compose.budgetNode("budget_remaining_overall").assertTextEquals("₹500.00")
+        compose.budgetNode("budget_remaining_overall").assertMoneyEquals("₹500.00")
         compose.budgetNode("budget_warning_overall").assertTextEquals("Limit exceeded")
-        compose.budgetNode("budget_remaining_category:food").assertTextEquals("₹500.00")
+        compose.budgetNode("budget_remaining_category:food").assertMoneyEquals("₹500.00")
         compose.budgetNode("edit_budget_overall").performClick()
         compose.onNodeWithTag("field_month").assertIsNotEnabled()
         compose.field("field_amount", "10000")
         compose.saveForm()
-        compose.budgetNode("budget_remaining_overall").assertTextEquals("₹4,500.00")
+        compose.budgetNode("budget_remaining_overall").assertMoneyEquals("₹4,500.00")
         compose.budgetNode("budget_warning_category:food").assertTextEquals("Limit exceeded")
         compose.activityRule.scenario.recreate()
-        compose.budgetNode("budget_remaining_overall").assertTextEquals("₹4,500.00")
+        compose.budgetNode("budget_remaining_overall").assertMoneyEquals("₹4,500.00")
     }
 
     @Test fun zeroNoBudgetValidationDuplicateAndRapidSaveRemainDistinct() {
@@ -82,7 +82,7 @@ class BudgetUiTest {
         compose.waitUntil(10_000) { compose.onAllNodes(hasTestTag("ledger_form")).fetchSemanticsNodes().isEmpty() }
         compose.dismissNotice()
         assertEquals(1, runBlocking { data.repository.read().budgets.size })
-        compose.budgetNode("budget_limit_overall").assertTextEquals("₹0.00")
+        compose.budgetNode("budget_limit_overall").assertMoneyEquals("₹0.00")
         compose.budgetNode("budget_warning_overall").assertTextEquals("At limit")
         compose.budgetNode("add_budget").performClick()
         compose.field("field_amount", "20")
@@ -110,15 +110,15 @@ class BudgetUiTest {
         compose.waitUntil(10_000) { compose.onAllNodes(hasTestTag("confirm_budget_copy")).fetchSemanticsNodes().isEmpty() }
         compose.dismissNotice()
         compose.budgetNode("selected_month").assertTextEquals("December 2026")
-        compose.budgetNode("budget_limit_overall").assertTextEquals("₹5,000.00")
-        compose.budgetNode("budget_limit_category:food").assertTextEquals("₹9,000.00")
+        compose.budgetNode("budget_limit_overall").assertMoneyEquals("₹5,000.00")
+        compose.budgetNode("budget_limit_category:food").assertMoneyEquals("₹9,000.00")
         val copied = runBlocking { data.repository.read().budgets }
         source.forEach { assertEquals(it, copied.first { entry -> entry.value.id == it.value.id }) }
         compose.budgetNode("edit_budget_overall").performClick()
         compose.field("field_amount", "6000")
         compose.saveForm()
         compose.budgetNode("previous_month").performClick()
-        compose.budgetNode("budget_limit_overall").assertTextEquals("₹5,000.00")
+        compose.budgetNode("budget_limit_overall").assertMoneyEquals("₹5,000.00")
     }
 
     @Test fun staleCopyAndStaleEditShowActionableErrorsWithoutOverwriting() {

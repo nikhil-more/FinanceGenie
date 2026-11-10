@@ -759,3 +759,46 @@ are maintained in [progress_tracker.md](../progress_tracker.md).
   confirmation/trace hardening, budget-save latency, full-app human accessibility,
   broader supported-device coverage and actual OS backup behavior remain open.
   The successful recovery drill does not itself mark Gate A complete.
+
+## 2026-11-10 — Step 9 acceptance work in progress
+
+- **Scope:** Personal-use offline acceptance, preserving FinanceGenie Dev data.
+  Extra report caching was removed after the user accepted the measured budget
+  latency. Production calculation code and Room schema remain identical to Step 8.
+- **Local host checks:** 86 JVM tests pass, debug lint reports no issues, and
+  debug/release/benchmark/recovery/acceptance/control APKs compile. Repository
+  hygiene and whitespace checks pass. Build evidence includes
+  `/tmp/financegenie-step9-full-build.log` and the variant-specific build logs.
+- **Current performance:** Twenty verified process-cold startup samples give
+  **775.52 ms P95** to UI-confirmed Overview, with **699.46 ms** to committed frame.
+  Thirty measurements per operation give summary **185.79 ms**, bounded search
+  **2.74 ms**, expense Save **296.89 ms**, and budget Save **314.52 ms** P95.
+  All original targets pass except budget Save, explicitly accepted by the user
+  at approximately 315 ms for individual use. Its original target flag remains
+  false. See [the aggregate](performance-gate-a.json) and
+  [method/limitations](performance.md). Disabling generic UIAutomator idle waiting
+  corrects test overhead; it does not prove an application startup speedup or
+  complete AndroidX TTID/TTFD. Sampled memory is retained with its longer-workload
+  comparison limitation.
+- **Actual framework extraction on API 35:** Cloud and device-transfer candidate
+  outputs are both **zero bytes**. The permissive control outputs **39,484 bytes**
+  for each destination and contains all six CE/DE file, preference and database
+  canaries. The phone's disabled backup setting is unchanged and the control is
+  removed. Raw backup bytes are not retained. This is extraction/filtering
+  evidence, not an actual OEM migration or cloud restore. Evidence:
+  `/tmp/financegenie-step9-backup-phone/summary.json` and its two test logs.
+- **Packaging/source review:** Release and candidate contain no fixture assets,
+  benchmark/test classes, setup routes or canary markers. Both request only the
+  AndroidX internal receiver permission, without Internet/SMS/storage/notification
+  permissions. Production source has no logging calls or scheduled polling APIs.
+- **CI repair:** The prior main run failed before build because `sdkmanager` was
+  absent from PATH. The initial setup-action run then exposed its removed default
+  `tools` package. CI now requests `platform-tools` explicitly; build and emulator
+  results are still pending. SDK setup details follow the
+  [action's v3 inputs](https://github.com/android-actions/setup-android/blob/v3/action.yml).
+- **Phone test harness:** Added waits for actual Compose roots/input state and
+  reacquisition after a stale semantics node. Repeated lost-foreground attempts
+  were not passes. The user confirmed they were using Home/Back during those
+  attempts and then made the phone available untouched; a fresh run is pending.
+- **Status:** Gate A remains IN PROGRESS until the release journey/fresh reader,
+  supported-version checks and full-app human accessibility/privacy review pass.

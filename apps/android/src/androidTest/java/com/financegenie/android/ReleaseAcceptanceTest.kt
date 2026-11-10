@@ -34,8 +34,16 @@ class ReleaseAcceptanceTest {
         assertTrue(requested.none { it in forbidden })
         val container = app.container
         val profiles = requireNotNull(container.profiles)
+        fun model() = ViewModelProvider(compose.activity)[LedgerViewModel::class.java]
         assertTrue(container.repository.read().accounts.isEmpty())
+        compose.runOnUiThread {
+            // Keep this isolated UI journey awake without changing phone settings.
+            compose.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
         compose.waitTag("add_transaction")
+        // Keep the golden fixture reproducible after November without replacing
+        // the production clock, repository or application container.
+        compose.runOnUiThread { model().filter { it.copy(month = YearMonth.of(2026, 11)) } }
         compose.onNodeWithTag("tab_settings").performClick()
         compose.onNodeWithTag("manage_accounts").performScrollTo().performClick()
         for ((name, kind) in listOf("Synthetic Bank" to AccountKind.BANK, "Synthetic Cash" to AccountKind.CASH, "Synthetic Card" to AccountKind.CREDIT_CARD)) {
@@ -67,7 +75,7 @@ class ReleaseAcceptanceTest {
         compose.onNodeWithTag("tab_budgets").performClick()
         compose.onNodeWithTag("add_budget").performScrollTo().performClick(); compose.field("field_amount", "5000"); compose.saveForm()
         compose.onNodeWithTag("budget_list").performScrollToNode(hasTestTag("budget_remaining_overall"))
-        compose.onNodeWithTag("budget_remaining_overall").assertTextEquals("₹1,501.00")
+        compose.onNodeWithTag("budget_remaining_overall").assertMoneyEquals("₹1,501.00")
         compose.onNodeWithTag("tab_transactions").performClick()
         compose.onNodeWithTag("edit_$purchase").performScrollTo().performClick()
         compose.field("field_amount", "2500.25"); compose.saveForm()
@@ -94,7 +102,6 @@ class ReleaseAcceptanceTest {
         val bytes = ByteArrayOutputStream().also { BackupCodec.write(source, it, container.clock) }.toByteArray()
         File(app.filesDir, "acceptance-smoke-only.json").writeBytes(bytes)
         compose.onNodeWithTag("tab_settings").performClick(); compose.onNodeWithTag("manage_recovery").performScrollTo().performClick()
-        fun model() = ViewModelProvider(compose.activity)[LedgerViewModel::class.java]
         compose.runOnUiThread { model().recovery!!.read { "{truncated".byteInputStream() } }
         compose.waitTag("recovery_message")
         assertEquals(source.ledger, container.repository.read())

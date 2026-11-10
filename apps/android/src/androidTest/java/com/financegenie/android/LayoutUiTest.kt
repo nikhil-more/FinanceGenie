@@ -75,7 +75,7 @@ class LayoutUiTest {
         capture("step6-font200-dark-analytics.png", "overview_list")
         compose.onNodeWithTag("tab_budgets").performClick()
         compose.addBudget("5000")
-        compose.budgetNode("budget_remaining_overall").assertTextEquals("₹5,000.00")
+        compose.budgetNode("budget_remaining_overall").assertMoneyEquals("₹5,000.00")
         capture("step5-font200-dark-budget.png", "budget_list")
         compose.onNodeWithTag("tab_overview").performClick()
         compose.onNodeWithTag("add_transaction").performClick()
