@@ -428,6 +428,13 @@ architecture decisions live in [the decision record](docs/decisions.md).
   financial values. Mark only unsupported pre-28 dialog PNGs unavailable; keep
   every large-font interaction assertion. Full CI and phone/manual checks remain
   open until the corrected regressions pass.
+- **Small-screen follow-up:** API 26 now passes the large-font interaction test
+  with its unsupported optional dialog image explicitly marked. Management's
+  edit button is covered by the archive snackbar on the shorter viewport; dismiss
+  the notice before editing. A release rerun also exposed an uncomposed account
+  option in a chooser. Close the keyboard, wait for the chooser list, scroll to
+  the exact option, and wait for it to close. Keep all original selections and
+  assertions; these latest harness fixes still need their matrix rerun.
 
 ## Current actions and outstanding checks
 

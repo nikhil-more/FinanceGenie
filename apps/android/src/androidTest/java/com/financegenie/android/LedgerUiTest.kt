@@ -6,6 +6,11 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
@@ -88,8 +93,17 @@ internal fun ComposeContentTestRule.field(tag: String, value: String) {
     }
 }
 internal fun ComposeContentTestRule.choose(tag: String, id: String) {
+    androidx.test.espresso.Espresso.closeSoftKeyboard()
+    waitTag(tag)
     onNodeWithTag(tag).performScrollTo().performClick()
+    val choice = SemanticsMatcher("A chooser option") {
+        it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("choice_") == true
+    }
+    val list = hasScrollToIndexAction() and hasAnyDescendant(choice)
+    waitUntil(15_000) { onAllNodes(list).fetchSemanticsNodes().size == 1 }
+    onNode(list).performScrollToNode(hasTestTag("choice_$id"))
     onNodeWithTag("choice_$id").performScrollTo().performClick()
+    waitNoTag("choice_$id")
 }
 internal fun ComposeContentTestRule.saveForm() {
     androidx.test.espresso.Espresso.closeSoftKeyboard()
@@ -152,6 +166,7 @@ class ManagementUiTest {
         compose.onNodeWithTag("archive_account_${account.value.id}").performScrollTo().performClick()
         compose.waitUntil(10_000) { runBlocking { data.repository.read().accounts.single().value.isArchived } }
         compose.waitForLedgerUi { it.accounts.any { record -> record.value.id == account.value.id && record.value.isArchived } }
+        compose.dismissNotice()
         compose.onNodeWithTag("edit_account_${account.value.id}").performScrollTo().performClick()
         compose.field("field_name", "Renamed Card")
         compose.saveForm()
@@ -165,6 +180,7 @@ class ManagementUiTest {
         compose.onNodeWithTag("archive_category_${category.value.id}").performScrollTo().performClick()
         compose.waitUntil(10_000) { runBlocking { data.repository.read().categories.first { it.value.id == category.value.id }.value.isArchived } }
         compose.waitForLedgerUi { it.categories.any { record -> record.value.id == category.value.id && record.value.isArchived } }
+        compose.dismissNotice()
         compose.onNodeWithTag("edit_category_${category.value.id}").performScrollTo().performClick()
         compose.field("field_name", "Meals")
         compose.saveForm()
