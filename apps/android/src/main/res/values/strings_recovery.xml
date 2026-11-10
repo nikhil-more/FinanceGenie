@@ -1,0 +1,27 @@
+<resources>
+    <string name="recovery_title">Backup, export and delete</string>
+    <string name="recovery_help">Keep a full JSON backup to recover your personal ledger. Files are saved only to the location you choose. Security settings stay on this device.</string>
+    <string name="recovery_backup">Save full JSON backup</string>
+    <string name="recovery_choose_restore">Choose JSON backup to restore</string>
+    <string name="recovery_csv">Save transaction CSV report</string>
+    <string name="recovery_csv_help">CSV includes active transactions, one row per transfer. It is a report, not a full backup. Accounts, budgets, deleted records and import history need JSON.</string>
+    <string name="recovery_plaintext_title">Save a readable file?</string>
+    <string name="recovery_plaintext">This JSON backup is not encrypted. Anyone with access to the file can read your accounts, transactions and private notes. Choose a location you trust. It includes deleted records and import replay history. Device credentials and security settings are excluded.</string>
+    <string name="recovery_csv_disclosure">This CSV is not encrypted and includes transaction descriptions and private notes. Text that could start a spreadsheet formula is prefixed with an apostrophe. Use JSON to preserve exact original text and recover the full ledger.</string>
+    <string name="recovery_choose_location">Choose save location</string>
+    <string name="recovery_delete">Delete all local financial data</string>
+    <string name="recovery_delete_confirm">Delete local data</string>
+    <string name="recovery_delete_help">Delete accounts, transactions, notes, budgets and import history from this app on this device. This cannot be undone here. Saved exports remain at their chosen locations. App lock and screen protection settings stay enabled as configured. Save a JSON backup first if you need recovery.</string>
+    <string name="recovery_validated">Backup validated</string>
+    <string name="recovery_counts">Accounts: %1$d · categories: %2$d · transactions (including deleted): %3$d · budgets: %4$d · observations: %5$d · import batches: %6$d</string>
+    <string name="recovery_restore_help">Restore into a new local ledger and replace the current one on this device. The current ledger is removed only after the replacement is verified. Save its backup first if needed. Financial IDs, notes and import guards are kept; security settings stay on this device. Cancel leaves your ledger unchanged.</string>
+    <string name="recovery_restore">Restore this backup and replace local ledger</string>
+    <string name="recovery_working">Reading or writing the selected file…</string>
+    <string name="recovery_replacing">Verifying and switching the local ledger…</string>
+    <string name="recovery_exported">File saved. Keep the JSON backup somewhere you can recover it.</string>
+    <string name="recovery_restored">Backup restored into a new local ledger.</string>
+    <string name="recovery_deleted">Local financial data deleted.</string>
+    <string name="recovery_failed">The operation could not finish. Check the file, storage space and document access, then retry. Invalid backups leave the current ledger unchanged. An incomplete export may need removal at its save location.</string>
+    <string name="recovery_stale">Your local ledger changed. Cancel and review the operation again before replacing or deleting it.</string>
+    <string name="recovery_cleanup_failed">The new ledger is active, but some old local files could not be removed. Retry cleanup before treating local deletion as complete.</string>
+</resources>

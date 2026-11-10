@@ -24,6 +24,8 @@ import com.financegenie.android.domain.LedgerCategory
 import com.financegenie.android.domain.LedgerValidator
 import com.financegenie.android.domain.MonthlyBudget
 import com.financegenie.android.domain.planBudgetCopy
+import com.financegenie.android.recovery.ImportReceipt
+import com.financegenie.android.recovery.PortableBackup
 import java.time.Clock
 import java.time.YearMonth
 import java.util.UUID
@@ -38,8 +40,48 @@ class RoomLedgerRepository(
     private val dao = database.ledgerDao()
     private val validator = LedgerValidator(clock)
     @Volatile private var cachedLedger: CachedLedger? = null
+    @Volatile private var retired = false
 
     override suspend fun read(): StoredLedger = database.withTransaction { load() }
+
+    internal suspend fun portableBackup(): PortableBackup = database.withTransaction {
+        check(!retired)
+        val ledger = load()
+        val groups = ledger.evidence.filter { it.input.importBatchId != null }.associate { it.changeGroupId to it.input.importBatchId!! }
+        PortableBackup(ledger, dao.importItems().map { ImportReceipt(groups.getValue(it.groupId), it.transactionId, it.afterRevision, it.previous == null) }, clock.millis())
+    }
+
+    /** Populate only a new, empty database; never mutate the active user's ledger. */
+    internal suspend fun populate(backup: PortableBackup) = database.withTransaction {
+        backup.validate(clock)
+        val empty = load()
+        require(empty.accounts.isEmpty() && empty.transactions.isEmpty() && empty.settings.revision == 0L)
+        val l = backup.ledger
+        dao.updateSettings(SettingsEntity(localId = l.settings.localId, currency = l.settings.currency, reportingZone = l.settings.reportingZone, revision = l.settings.revision))
+        l.categories.forEach { if (it.value.id == com.financegenie.android.domain.UNCATEGORIZED_ID) dao.updateCategory(it.value.toEntity(it.metadata)) else dao.insertCategory(it.value.toEntity(it.metadata)) }
+        l.accounts.forEach { dao.insertAccount(it.value.toEntity(it.metadata)) }
+        l.transactions.forEach { dao.insertTransaction(it.toEntity()) }
+        l.budgets.forEach { dao.insertBudget(it.value.toEntity(it.metadata)) }
+        l.observations.forEach { dao.insertObservation(it.value.toEntity(it.metadata)) }
+        l.importBatches.forEach { dao.insertBatch(ImportBatchEntity(it.id, it.accountId, it.fingerprint, 1, it.acceptedCount, it.isUndone, it.createdAtMillis)) }
+        val batchGroups = l.evidence.filter { it.input.importBatchId != null }.associate { it.input.importBatchId!! to it.changeGroupId }
+        val undone = l.importBatches.associate { batchGroups.getValue(it.id) to it.isUndone }
+        l.evidence.groupBy { it.changeGroupId }.forEach { (id, rows) -> dao.insertGroup(ChangeGroupEntity(id, rows.minOf { it.recordedAtMillis }, undone[id] ?: false)) }
+        val byId = l.transactions.associateBy { it.transaction.id }
+        dao.insertItems(backup.receipts.map { ChangeItemEntity(batchGroups.getValue(it.batchId), it.transactionId, it.afterRevision,
+            if (it.created) null else byId.getValue(it.transactionId).toEntity()) })
+        dao.insertEvidence(l.evidence.map { SourceEvidenceEntity(it.input.id, it.input.transactionId, it.input.source, it.input.sourceKey,
+            it.input.importBatchId, it.changeGroupId, it.recordedAtMillis, it.isActive) })
+    }
+
+    /** Exclude concurrent/stale writes while publishing a replacement profile. */
+    internal suspend fun retire(expected: com.financegenie.android.data.LedgerSettings, publish: () -> Unit) = database.withTransaction {
+        check(!retired)
+        if (load().settings != expected) throw StaleRecordException()
+        publish() // Atomic pointer must succeed before this repository is retired.
+        retired = true
+        cachedLedger = null
+    }
 
     override fun observe(): Flow<StoredLedger> = dao.observeRevision()
         .map { read() }
@@ -280,6 +322,7 @@ class RoomLedgerRepository(
     }
 
     private suspend fun <T> mutate(action: suspend (StoredLedger) -> T): T = database.withTransaction {
+        check(!retired) { "This local profile was closed" }
         val before = load()
         val result = action(before)
         dao.setRevision(Math.addExact(before.settings.revision, 1L))

@@ -38,7 +38,7 @@ architecture decisions live in [the decision record](docs/decisions.md).
 | 5 | Calendar budgets | PASS | 55 JVM tests, 23 phone storage tests, 17 UI tests and expense/budget restart probe pass; schema unchanged | Below |
 | 6 | Offline overview and analytics | PASS | 66 JVM, 27 storage, 23 UI tests and fresh-process checks pass; 20-launch/30-operation baseline recorded, with startup limitation retained for Gate A | Below |
 | 7 | CSV preview/import/undo | PASS | 79 JVM, 35 phone storage, 31 UI tests and four fresh-reader checks pass; 10,000-row import verified in 5.25s | Below |
-| 8 | Backup, restore, export and local deletion | NOT STARTED | After Step 7 | Record when started |
+| 8 | Backup, restore, export and local deletion | PASS | 86 JVM, 42 storage, 35 UI tests; genuine fresh-install recovery and three crash boundaries pass | Below |
 | 9 | Offline acceptance / Gate A | NOT STARTED | Requires Steps 0–8 and phone evidence | Record when started |
 | 10 | Supported notification parsers | NOT STARTED | B scope decision after A | Record when started |
 | 11 | Consent and durable capture | NOT STARTED | After Step 10 | Record when started |
@@ -301,10 +301,58 @@ architecture decisions live in [the decision record](docs/decisions.md).
   [baseline](docs/csv-performance-baseline.json),
   [verification](docs/verification-log.md#step-7--previewed-reversible-csv-imports--2026-11-10).
 
+### Step 8 — Personal recovery and local deletion
+
+- **Decision:** Stream a versioned plaintext JSON backup with exact
+  integer strings, entity counts and a canonical SHA-256 checksum. Explicitly
+  disclose plaintext before the system save picker; CSV is a separate report.
+- **Restore:** Validate bounded input and references before writing a new
+  isolated database. Verify its complete contents before atomically switching a
+  small active-database pointer. A fresh local identity remaps CSV replay keys;
+  financial IDs and notes remain intact. Retire/discard the old repository/cache.
+- **History boundary:** Exclude manual undo before-images, credentials/preferences
+  and disposable drafts. Preserve minimal CSV ownership/revision receipts needed
+  for replay-safe batch undo/restore, without exporting prior financial payloads.
+- **Deletion:** Confirm deletion of app-owned ledger databases and staging
+  files; retain the device's privacy settings and user-selected exported documents.
+  Activation/deletion failures must be visible and never reported as success.
+- **Alternative/reason:** Reject overwriting or renaming an open SQLite/WAL
+  database and raw database-file export. A verified isolated replacement and an
+  atomic filename pointer preserve the current ledger through staging failure.
+  Retiring old writes and rebuilding ViewModels prevents stale forms/cache from
+  crossing the profile boundary. No user-facing multi-profile administration is added.
+- **Dependency/bounds:** Use pinned Gson's explicit streaming schema at runtime
+  for strict parsing and JVM tests; no reflective serialization. Cap input/output
+  at 50 MiB, transactions at 100,000, other entities/fields separately. This adds
+  a runtime dependency and a canonical schema to maintain; never silently truncate.
+- **Verification:** 86 JVM tests, 35 existing + seven recovery storage tests and
+  31 existing + four recovery UI tests pass. A 1,000-record backup preserves every
+  declared field, IDs, notes/tombstones, budgets, observations and CSV guards with
+  exact ₹3,258.49 spending/₹60,000 income. The actual save/open pickers yield a
+  1,000-row JSON backup and 999 active CSV rows with formula text escaped. Preview
+  rotation/cancel, stale confirmations, failed staged inserts, edited import guards,
+  undone created/matched batches and local file deletion pass. The dark 200% dialog
+  capture was visually inspected; privacy/entry/budget/analytics regressions pass.
+  A thrown old-file cleanup error keeps deletion visibly pending until retry succeeds.
+- **Recovery drill:** A separate synthetic app is genuinely uninstalled/reinstalled;
+  it proves empty state, restores the same backup and verifies all data in a fresh
+  process. Three more fresh readers pass after actual staged-insert interruption,
+  publication before old-file cleanup, and deletion before cleanup. Together with
+  existing probes, eight fresh-reader checks pass. Only disposable test packages/
+  files were removed; the user's Dev ledger/preferences were never cleared.
+- **Consequence/revisit:** Plaintext exports remain readable wherever saved and
+  local deletion does not remove them. Manual undo snapshots are omitted; only
+  minimal CSV revision/ownership guards survive. New schema versions, encrypted
+  exports or larger limits require their own requirements/recovery measurements.
+  The 1,000-row drill is not a maximum-volume/P95 or physical power-loss claim.
+  Builds/lint/hygiene pass; Room v1 and normal permissions are unchanged.
+- **Evidence:** [Behavior/format/drill](docs/backup-recovery.md),
+  [verification](docs/verification-log.md#step-8--personal-backup-recovery-and-local-deletion--2026-11-10).
+
 ## Current actions and outstanding checks
 
-1. Implement versioned JSON backup/restore, safe CSV report export and local
-   deletion (Step 8), including a fresh-install recovery drill before real data.
+1. Run offline acceptance and close Gate A (Step 9). Steps 0–8 are complete;
+   recovery alone does not establish full-app release readiness.
 2. Before Gate A, address startup confirmation/trace limits and measure budget-save
    latency. Do not claim a twenty-run AndroidX TTFD result from the incomplete capture.
 3. Device-backup behavior remains a later Gate A check; never commit a full phone

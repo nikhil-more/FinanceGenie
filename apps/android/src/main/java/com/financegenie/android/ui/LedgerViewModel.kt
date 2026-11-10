@@ -75,8 +75,10 @@ data class BudgetCopyConfirmation(val plan: BudgetCopyPlan, val expectedLedgerRe
 private data class LoadResult(val ledger: StoredLedger? = null, val failed: Boolean = false)
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class LedgerViewModel(private val repository: LedgerRepository, private val clock: Clock) : ViewModel() {
+class LedgerViewModel(private val repository: LedgerRepository, private val clock: Clock,
+    profiles: com.financegenie.android.recovery.LocalProfileStore? = null) : ViewModel() {
     val csv = CsvImportController(repository, clock, viewModelScope)
+    val recovery = profiles?.let { RecoveryController(it, clock, viewModelScope) }
     private val calculator = LedgerCalculator(clock)
     private val filters = MutableStateFlow(LedgerFilters(YearMonth.from(LedgerDates.today(clock))))
     private val reload = MutableStateFlow(0)

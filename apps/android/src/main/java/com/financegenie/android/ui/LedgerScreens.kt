@@ -208,11 +208,12 @@ private fun magnitudeMoney(minor: Long): String = NumberFormat.getCurrencyInstan
     }
 }
 
-@Composable internal fun SettingsScreen(state: PrivacyUiState, model: PrivacyViewModel, authenticate: (Boolean) -> Unit, accounts: () -> Unit, categories: () -> Unit, imports: () -> Unit) {
+@Composable internal fun SettingsScreen(state: PrivacyUiState, model: PrivacyViewModel, authenticate: (Boolean) -> Unit, accounts: () -> Unit, categories: () -> Unit, imports: () -> Unit, recovery: (() -> Unit)? = null) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Button(onClick = accounts, modifier = Modifier.fillMaxWidth().testTag("manage_accounts")) { Text(stringResource(R.string.manage_accounts)) }
         Button(onClick = categories, modifier = Modifier.fillMaxWidth().testTag("manage_categories")) { Text(stringResource(R.string.manage_categories)) }
         Button(onClick = imports, modifier = Modifier.fillMaxWidth().testTag("manage_imports")) { Text(stringResource(R.string.csv_import)) }
+        if (recovery != null) Button(onClick = recovery, modifier = Modifier.fillMaxWidth().testTag("manage_recovery")) { Text(stringResource(R.string.recovery_title)) }
         HorizontalDivider()
         Text(stringResource(R.string.privacy), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
         ToggleRow(R.string.app_lock, state.settings.appLockEnabled, "app_lock") { if (it) authenticate(true) else model.disableLock() }

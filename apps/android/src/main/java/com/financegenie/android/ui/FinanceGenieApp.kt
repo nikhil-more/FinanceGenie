@@ -61,8 +61,9 @@ fun FinanceGenieApp(model: LedgerViewModel, privacy: PrivacyUiState, privacyMode
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val route = backStackEntry?.destination?.route ?: "overview"
-    val nested = route == "accounts" || route == "categories" || route == "csv"
+    val nested = route in setOf("accounts", "categories", "csv", "recovery")
     val csvState by model.csv.state.collectAsStateWithLifecycle()
+    val recoveryState = model.recovery?.state?.collectAsStateWithLifecycle()?.value
     val snackbars = remember { SnackbarHostState() }
     val context = LocalContext.current
     LaunchedEffect(notice?.id) {
@@ -80,10 +81,11 @@ fun FinanceGenieApp(model: LedgerViewModel, privacy: PrivacyUiState, privacyMode
             "accounts" -> R.string.manage_accounts
             "categories" -> R.string.manage_categories
             "csv" -> R.string.csv_import
+            "recovery" -> R.string.recovery_title
             else -> R.string.app_name
         })) }, navigationIcon = {
-            if (nested) TextButton(onClick = { if (route == "csv") model.csv.cancel(); navController.popBackStack() },
-                enabled = route != "csv" || csvState.canCancel, modifier = Modifier.testTag("back")) { Text(stringResource(R.string.back)) }
+            if (nested) TextButton(onClick = { if (route == "csv") model.csv.cancel(); if (route == "recovery") model.recovery?.cancel(); navController.popBackStack() },
+                enabled = (route != "csv" || csvState.canCancel) && (route != "recovery" || recoveryState?.canCancel != false), modifier = Modifier.testTag("back")) { Text(stringResource(R.string.back)) }
         }) },
         bottomBar = {
             NavigationBar {
@@ -113,10 +115,12 @@ fun FinanceGenieApp(model: LedgerViewModel, privacy: PrivacyUiState, privacyMode
             composable("transactions") { LedgerContent(state, model::retry) { TransactionsScreen(state, model) } }
             composable("budgets") { LedgerContent(state, model::retry) { BudgetsScreen(state, model, busy) } }
             composable("settings") { SettingsScreen(privacy, privacyModel, authenticate,
-                accounts = { navController.navigate("accounts") }, categories = { navController.navigate("categories") }, imports = { navController.navigate("csv") }) }
+                accounts = { navController.navigate("accounts") }, categories = { navController.navigate("categories") }, imports = { navController.navigate("csv") },
+                recovery = if (model.recovery == null) null else ({ navController.navigate("recovery") })) }
             composable("accounts") { LedgerContent(state, model::retry) { AccountsScreen(state, model) } }
             composable("categories") { LedgerContent(state, model::retry) { CategoriesScreen(state, model) } }
             composable("csv") { LedgerContent(state, model::retry) { CsvImportScreen(state.ledger!!, model.csv, model::editTransaction) } }
+            composable("recovery") { model.recovery?.let { RecoveryScreen(it) } }
         }
     }
     if (editor != null && state.ledger != null) key(editor!!.id) {

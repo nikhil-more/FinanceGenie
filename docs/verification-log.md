@@ -653,3 +653,109 @@ are maintained in [progress_tracker.md](../progress_tracker.md).
 - **Status:** Step 7 PASS. Next is Step 8 backup/restore/export/local deletion.
   Step 6's startup confirmation/trace limits, budget-save latency, broader device/
   full-app human accessibility, actual OS backup behavior and Gate A remain open.
+
+## Step 8 — Personal backup, recovery and local deletion — 2026-11-10
+
+- **Implemented:** Settings → Backup, export and delete. Full strict versioned
+  JSON with exact integer strings, mandatory counts, canonical content checksum
+  and explicit plaintext/private-note disclosure before Android's save picker.
+  Separate CSV report quotes cells, escapes formula-like text and includes active
+  events only, one row per transfer. JSON preserves original text, tombstones,
+  financial metadata, budgets, observations and necessary CSV replay/ownership guards.
+  Security preferences/credentials, original statements, unfinished drafts, manual
+  undo before-images, owner bindings and outbox/session state are excluded.
+- **Restore boundary:** Parse/validate fixed-depth UTF-8, field/table caps, IDs,
+  references and checked financial totals before staging. Populate an isolated
+  empty database, re-read/compare complete records and import receipts, recheck
+  current settings/revision under Room's write boundary, publish an atomic private
+  filename pointer, retire old writes/cache, close handles and clean old profiles/
+  sidecars. A fresh local UUID consistently remaps CSV profile/file hashes while
+  preserving financial IDs/account-scoped reference hashes. Activity recreation
+  clears prior ViewModels, drafts, navigation and auth grants. Startup resumes
+  abandoned-stage/old-file cleanup; cleanup failure remains visible/retryable.
+- **Bounds/dependency:** 50 MiB input/output, 100,000 transactions and explicit
+  per-table/field caps. Unsupported schema, wrong types, duplicate/unknown fields,
+  malformed UTF-8/Unicode, unsafe integer strings, truncation, wrong counts/checksum
+  and invalid references are rejected. Pinned Gson 2.11's streaming API is now a
+  runtime dependency; fields are manually enumerated, with no reflective serialization.
+- **JVM/build:** **86 JVM tests pass**, zero failures/errors/skips, including seven
+  new backup/report tests. The 1,000-record pure round trip checks every field,
+  signed positions, linked refund/transfers/card payment, observations, budgets,
+  notes/newlines/quotes/emoji and tombstones against independent expectations.
+  Tests cover invalid schema/UTF-8/surrogates/deep values/field and transaction caps,
+  an actual >50 MiB stream, corruption/count mismatch and spreadsheet prefix escaping.
+  Final debug/release/test/unit/lint build: **BUILD SUCCESSFUL in 14s**, 128 tasks
+  (31 executed, 97 up-to-date). Lint reports **No issues found**. The final separate
+  recovery-check app/test build passes in **3s**, 65 tasks (11 executed, 54 up-to-date).
+  Exported Room schema v1 has no diff; no migration is invented.
+- **Recovery storage:** **Seven tests pass** on the A063 in **7.805s**: 1,000-record
+  exact restore/new identity/CSV replay and repeated undo/restore; stale restore/
+  delete rejection; failure after a staged insert preserving the selected ledger;
+  cleanup of owned DB/WAL files with exported file/privacy preference retention;
+  edited imported-row guards surviving restore; and undone created/matched batches
+  restoring while preserving the complete original manual record; and a thrown
+  cleanup I/O error retaining a visible pending state until successful retry.
+  Final review caught that an exception after publication could otherwise omit
+  the pending flag; cleanup/close errors now retain it. The first
+  fixture attempted to create a tombstone directly; it now creates then deletes
+  through normal repository operations, retaining the original expected totals.
+- **Recovery UI:** **Four tests pass** in **29.331s**: plaintext disclosure/cancel,
+  invalid backup and stale-delete protection; preview surviving rotation then
+  cancelling without writes; actual profile switch replacing the old ViewModel;
+  real JSON/CSV save pickers and re-opening only the unique created JSON; and dark
+  200% font controls/scrollable disclosure. Host inspection verifies **1,000 JSON
+  records**, **999 active CSV rows** and formula-prefix escaping. The synthetic dark
+  capture was retrieved from test-owned cache and visually inspected: text wraps,
+  disclosure and both actions are legible/reachable. This is not a new human
+  recovery-specific TalkBack or tablet/minimum-API run; those remain Gate A checks.
+- **Phone readiness finding:** The first UI attempt had no visible Compose window
+  because the phone was dozing/locked. Read only wake/keyguard status, asked the
+  user to unlock, and reran after their confirmation. All required UI cases then
+  pass, with no skipped checks, global lock-setting change or credential access.
+- **Genuine fresh install:** In the separate **FinanceGenie Recovery Check** app,
+  seed/export 1,000 records (**1.889s**), uninstall/reinstall only that disposable
+  package, assert an empty ledger/default security preferences, and restore the
+  exact retained bytes (**1.463s**). A force-stop/new reader verifies every record
+  against the newly scoped source, exact **₹3,258.49 spending**, **₹60,000 income**,
+  **Bank ₹51,741.51 / Cash ₹5,000 / Card ₹0**, budgets/notes/tombstone/observation,
+  CSV replay and repeated undo/restore, then local deletion (**1.352s**). The
+  user-selected export remains after deletion. Host transfer uses shell-v2 stdin
+  EOF and creates only the new check app's test-file directory; earlier raw
+  exec-out/absent-directory harness attempts were corrected, without changing app
+  behavior or financial assertions.
+- **Three actual crash boundaries:** Instrumentation-only SQLite/context wrappers
+  signal after a real insert in a pending staged transaction, or after durable
+  pointer publication before old-file cleanup (restore and deletion separately).
+  The host force-stops only the synthetic check app at each signal. Fresh readers
+  verify respectively the complete unchanged old ledger (**1.120s**), complete
+  replacement/new identity (**1.120s**), and empty new ledger with old files cleaned
+  (**1.031s**). These are process-interruption checks, not physical power-loss tests.
+- **Regression:** **35 existing storage tests** (2.108s), **12 entry/navigation/
+  privacy/error/layout UI** (73.173s), **five budget UI** (38.323s), **six analytics
+  UI** (24.437s), **eight CSV UI/picker** (44.047s), storage and expense/budget
+  fresh-reader stages, and CSV's interrupted-commit/undone replay readers
+  (0.103s/0.115s) all pass. Aggregate: **42 storage, 35 UI and eight fresh-reader
+  verifications**, including the new recovery checks. Normal Dev launch reports
+  **Status: ok**. Prior performance targets are not reclassified by this step.
+- **Isolation/package:** Normal debug/release APKs contain no fixture assets or
+  test/crash/benchmark classes. The only requested permission remains AndroidX's
+  internal receiver permission; no Internet/storage/SMS/notification collection.
+  Release size **7,404,310 bytes**, SHA-256
+  `6b3a6dd0faec3c516af9d3a19e26529d86d0874ef5988dc3e3f43daca2c02d44`.
+  `.gitignore` also excludes default JSON backup names. The two synthetic check
+  packages and only driver-owned Downloads exports were removed after evidence
+  capture. FinanceGenie Dev reopened with its normal ledger/preferences retained.
+  No device serial, broad phone log, personal capture or financial record is committed.
+- **Evidence/reproduction:** [Recovery guide](backup-recovery.md), checked-in tests/
+  driver, JVM/lint reports, `/tmp/financegenie-step8-cleanup-verified-build.log`,
+  `/tmp/financegenie-step8-cleanup-verified-isolated-build.log`,
+  `/tmp/financegenie-step8-final-regression-phone.log`,
+  `/tmp/financegenie-step8-final-csv-regression.log`,
+  `/tmp/financegenie-step8-cleanup-verified-storage.log`,
+  `/tmp/financegenie-step8-ui-unlocked.log`,
+  `/tmp/financegenie-step8-cleanup-verified-drill.log` and their output directories.
+  These are local/device results; remote CI is separate evidence.
+- **Status:** Step 8 PASS. Next is offline acceptance/Gate A (Step 9). Startup
+  confirmation/trace hardening, budget-save latency, full-app human accessibility,
+  broader supported-device coverage and actual OS backup behavior remain open.
+  The successful recovery drill does not itself mark Gate A complete.

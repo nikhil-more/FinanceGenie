@@ -17,6 +17,9 @@ internal interface LedgerDao {
     @RawQuery suspend fun dataVersion(query: SupportSQLiteQuery): Long
     @Query("SELECT revision FROM ledger_settings WHERE id = 1") fun observeRevision(): Flow<Long>
     @Query("UPDATE ledger_settings SET revision = :revision WHERE id = 1") suspend fun setRevision(revision: Long)
+    @Update suspend fun updateSettings(settings: SettingsEntity)
+    @Query("SELECT * FROM change_items WHERE group_id IN (SELECT change_group_id FROM source_evidence WHERE import_batch_id IS NOT NULL)")
+    suspend fun importItems(): List<ChangeItemEntity>
     @Query("SELECT * FROM accounts ORDER BY id") suspend fun accounts(): List<AccountEntity>
     @Query("SELECT * FROM categories ORDER BY id") suspend fun categories(): List<CategoryEntity>
     @Query("SELECT * FROM transactions ORDER BY id") suspend fun allTransactions(): List<TransactionEntity>

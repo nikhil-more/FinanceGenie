@@ -331,3 +331,52 @@ References checked for this implementation:
 - **Revisit:** Actual bank adapters, import-volume regressions and Step 8 portable
   restore. Restoring to a new profile must re-scope hashed file/evidence identities
   from stored components without retaining raw statements or bank references.
+
+## 2026-11-10 — Step 8 personal recovery
+
+- **Format/trust:** A versioned strict streaming JSON schema with exact integer
+  strings, mandatory entity counts and a canonical content checksum. Checksum
+  detects accidental corruption, not authenticity. Plaintext/private-note exposure
+  is disclosed before a system save picker; no permanent provider grant or private
+  export copy is retained. Use pinned Gson 2.11's streaming reader/writer at runtime
+  for strict token handling and JVM testability, instead of Android-only JSON or
+  reflection-based automatic object serialization. This adds one existing cached
+  dependency to runtime; model fields are explicitly enumerated.
+- **Bounds:** 50 MiB and 100,000 transactions, with separate table caps and existing
+  per-field limits. Reject unsupported/unknown/duplicate schema fields, unsafe
+  numeric token types, invalid Unicode, references and checked arithmetic before
+  writing a staged database. Never truncate data to fit the backup limit.
+- **Replacement:** Build an empty separate Room database, populate/validate it and
+  re-read all financial records/provenance/guards before selection. Preserve IDs,
+  notes, metadata and tombstones while creating a fresh local identity. Recompute
+  CSV profile/file keys consistently; account-scoped reference hashes remain valid.
+  Keep schema v1 and use an atomic app-private filename pointer rather than renaming
+  an open SQLite/WAL database or overwriting the current ledger in place.
+- **Concurrency/lifetime:** Recheck the current complete ledger settings/revision
+  under its Room write boundary before publishing. Retire old repository writes,
+  close the old database, discard cached snapshots and clear retained ViewModels/
+  drafts/navigation on profile replacement. Keep the final selection/cleanup phase
+  non-cancellable; startup removes unselected stages/old database sidecars. A
+  cleanup failure stays visible and retryable, rather than claiming complete deletion.
+- **Portable history:** Manual undo groups and prior financial before-images are
+  disposable and excluded. CSV's minimal batch/transaction ownership flag and
+  accepted revision are necessary provenance, so include these small receipts.
+  Reconstruct only their guarded batch operation, preserving edited-row conflicts
+  and explicit undone replay/restore. Attaching evidence still cannot rewrite a
+  pre-existing financial event. No owner bindings, device credentials/preferences,
+  pending previews/candidates, sessions or outbox work are restored.
+- **Export/deletion:** A separate CSV report includes active events, one transfer
+  row, exact amounts and notes. Quote every cell and prefix formula-like text with
+  an apostrophe, explicitly disclosing that JSON preserves exact original text.
+  Confirm local deletion against the current revision, activate a new empty ledger
+  and remove old app-owned profiles/sidecars. Keep exported documents at their
+  chosen locations and retain device security preferences, avoiding an accidental
+  weakening of app-lock/screen protection. Physical secure flash erasure is not promised.
+- **Test isolation:** The user supplies the phone. Test namespaces prevent normal
+  ledger/preferences from being touched. A separate `.recoverycheck` package enables
+  real uninstall/reinstall recovery; only that disposable package is removed.
+  Instrumentation-only wrappers interrupt actual staged inserts and cleanup after
+  pointer publication. See [the recovery guide](backup-recovery.md).
+- **Revisit:** Real schema upgrades, larger recovery-volume measurements or a
+  separately scoped encrypted portable-backup requirement. Individual local use
+  does not require accounts/sign-in, teams, roles or cloud infrastructure.

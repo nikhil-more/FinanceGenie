@@ -4,15 +4,15 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import com.financegenie.android.data.LedgerRepository
-import com.financegenie.android.data.local.FinanceGenieDatabase
-import com.financegenie.android.data.local.RoomLedgerRepository
 import com.financegenie.android.privacy.PrivacyPreferences
+import com.financegenie.android.recovery.LocalProfileStore
 import java.time.Clock
 
 interface AppContainer {
     val repository: LedgerRepository
     val privacy: PrivacyPreferences
     val clock: Clock
+    val profiles: LocalProfileStore? get() = null
 }
 
 open class FinanceGenieApplication : Application() {
@@ -28,7 +28,7 @@ open class FinanceGenieApplication : Application() {
 
 private class LocalAppContainer(context: Context) : AppContainer {
     override val clock: Clock = Clock.systemUTC()
-    private val database by lazy { FinanceGenieDatabase.open(context, clock = clock) }
-    override val repository: LedgerRepository by lazy { RoomLedgerRepository(database, clock) }
+    override val profiles by lazy { LocalProfileStore(context, clock) }
+    override val repository: LedgerRepository get() = profiles.session.value.repository
     override val privacy = PrivacyPreferences(context.getSharedPreferences("privacy", Context.MODE_PRIVATE))
 }

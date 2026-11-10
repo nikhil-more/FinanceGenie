@@ -44,6 +44,8 @@ google-services.json
 private-data/
 *.csv
 !fixtures/csv/*.csv
+FinanceGenie-backup*.json
+*.backup.json
 /backups/
 .android/
 .aws/

@@ -2,8 +2,10 @@
 
 The storage API is `LedgerRepository`, implemented by `RoomLedgerRepository`.
 `FinanceGenieDatabase.open(applicationContext)` opens the private
-`financegenie-ledger.db` file. Keep one application-scoped instance per active
-profile; the Step 4 application container now shares it with all management/entry
+`financegenie-ledger.db` file for the initial ledger. Step 8's `LocalProfileStore`
+owns replacement databases named `financegenie-profile-<uuid>.db` and a small
+atomic active-file pointer. Keep one application-scoped instance per active
+profile; the application container shares it with all management/entry
 screens. Do not open a new database per screen. Draft revisions remain fixed while
 a form is open; stale edits must be reopened rather than silently rebased.
 
@@ -43,7 +45,8 @@ a form is open; stale edits must be reopened rather than silently rebased.
 - Source keys are unique within source type. Financial writes and evidence commit
   atomically. Undo detaches evidence added to pre-existing records while retaining
   its key; evidence of newly tombstoned records remains available for replay review.
-  Import-batch bookkeeping is schema-only until Step 7 implements CSV workflows.
+  CSV batches use revision/ownership receipts and explicit undo/restore with file
+  replay guards. See [the CSV contract](csv-import.md).
 
 `observe()` watches the ledger revision and reads a complete snapshot in a Room
 transaction. It can conflate intermediate revisions; it must never emit a partial
@@ -99,5 +102,10 @@ version's schema or fall back to destructive recreation.
 
 The database relies on the app sandbox/platform storage protections. It is not
 claimed to be application-encrypted, and a sync/OS backup is not a portable recovery
-feature. Versioned export/restore and local deletion are Step 8 requirements before
-real personal use. The [tracker](../progress_tracker.md) records remaining gates.
+feature. Step 8 adds [versioned JSON recovery](backup-recovery.md), preserving
+financial metadata and minimal CSV guards while excluding manual undo before-images.
+Staging/verification precedes a revision-checked atomic pointer switch. The old
+repository is retired, its connection-specific cache is discarded and old handles/
+database sidecars are removed. Local deletion activates a fresh empty ledger and
+resumes old-file cleanup after interruption; user-selected exports and device
+privacy preferences remain. The [tracker](../progress_tracker.md) records remaining gates.

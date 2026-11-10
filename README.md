@@ -14,6 +14,11 @@ Settings includes CSV import with column/date mapping, an explicit review previe
 duplicate suggestions and replay protection, plus batch history with safe undo/
 restore. See [the CSV guide](docs/csv-import.md) for the supported personal-statement
 format and synthetic examples.
+Settings also provides full JSON backup/restore, a spreadsheet-safe transaction
+CSV report and confirmed local deletion. Backups preserve notes, tombstones and
+CSV replay guards; restore verifies a new database before switching to it. See
+[personal recovery](docs/backup-recovery.md) for the plaintext-file disclosure,
+limits and recovery drill.
 
 ## Open and build
 
@@ -93,6 +98,19 @@ database. It verifies a real interrupted SQLite transaction in a fresh process,
 then durable undo/replay protection and explicit restore. See [CSV reproduction
 and the 10,000-row baseline](docs/csv-import.md#verification-and-reproduction).
 
+For backup/restore/export/deletion checks and a genuine fresh-install drill:
+
+```bash
+./gradlew -PfinancegenieTestBuildType=recoveryCheck :apps:android:assembleRecoveryCheck :apps:android:assembleRecoveryCheckAndroidTest
+python3 scripts/verify_recovery_on_device.py
+```
+
+The separate **FinanceGenie Recovery Check** package contains synthetic test data
+only. The driver can uninstall/reinstall that package to verify recovery without
+clearing FinanceGenie Dev. Keep the phone unlocked for its real save/open picker
+checks. Storage/UI/drill subsets and interruption boundaries are documented in
+[the recovery guide](docs/backup-recovery.md#reproduce-recovery-checks).
+
 Manually check dark mode, rotation, back navigation, 200% font size and TalkBack.
 The user supplies a connected physical phone for device tests; the current
 reference phone is an A063 running Android 15 / API 35. Record test outcomes and
@@ -128,8 +146,9 @@ notification access and AI are not configured.
 It is for individual use, with one person's own accounts and private ledger.
 Team spaces, organizational roles and business administration are outside scope.
 OS cloud/device-transfer backup exclusions are explicit; actual device behavior
-must still be verified. The app has no application-level database encryption or
-portable backup yet. Optional app lock uses the Android device credential; screen
+must still be verified. The app has no application-level database encryption.
+User-selected JSON/CSV exports are plaintext, with an explicit disclosure before
+the save picker. Optional app lock uses the Android device credential; screen
 protection is enabled by default. See [the entry/privacy guide](docs/manual-entry.md)
 for behavior and manual phone checks. Never commit real financial examples, local configuration,
 signing keys or service credentials. Use synthetic data for later tests.
@@ -143,6 +162,7 @@ signing keys or service credentials. Use synthetic data for later tests.
 - [Calendar budgets and copy behavior](docs/budgets.md)
 - [Offline Overview, charts and filter scope](docs/analytics.md)
 - [CSV mapping, review, replay and batch recovery](docs/csv-import.md)
+- [Personal JSON recovery, CSV report and local deletion](docs/backup-recovery.md)
 - [Performance methodology and reproduction](docs/performance.md)
 - [Acceptance checklist](docs/e2e-acceptance.md)
 

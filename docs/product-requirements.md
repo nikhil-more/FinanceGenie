@@ -14,6 +14,8 @@ foundation, financial model, Room storage and manual-management screens are
 implemented; Step 4 automated/manual, Step 5 budgets and Step 6 analytics/baseline
 acceptance have passed. Step 7 adds bounded CSV mapping/preview, explicit
 classification/matching, atomic import and replay-protected batch undo/restore.
+Step 8 adds personal JSON backup/restore, a separate safe CSV report and confirmed
+local deletion, with isolated staging before replacing the current local ledger.
 Startup measurement limits remain explicit Gate A work. The app
 starts without sign-in, payment credentials or sensitive
 permissions. Initial currency is INR, reporting zone Asia/Kolkata, minimum Android
@@ -23,7 +25,8 @@ an A063 running Android 15 / API 35. Device serials and personal data are not re
 The app offers Overview, Transactions, Budgets and Settings navigation, account/
 category management, manual transactions, calendar budgets, exact scoped totals,
 signed charts with text alternatives, recent activity, shared filters,
-light/dark themes and empty/error states. CSV import/history is in Settings.
+light/dark themes and empty/error states. CSV import/history and backup/export/
+deletion are in Settings.
 It contains
 no invented financial values or nonfunctional add/import buttons. Debug and release
 application IDs differ to isolate their data.

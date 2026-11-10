@@ -10,6 +10,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.lifecycle.ViewModel
@@ -24,7 +28,7 @@ import com.financegenie.android.ui.theme.FinanceGenieTheme
 class MainActivity : ComponentActivity() {
     private val container get() = (application as FinanceGenieApplication).container
     private val privacyModel by lazy { retained { PrivacyViewModel(container.privacy) } }
-    private val ledgerModel by lazy { retained { LedgerViewModel(container.repository, container.clock) } }
+    private val ledgerModel by lazy { retained { LedgerViewModel(container.repository, container.clock, container.profiles) } }
     private val credential = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         privacyModel.authenticationFinished(it.resultCode == RESULT_OK)
     }
@@ -35,13 +39,29 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val privacy by privacyModel.state.collectAsStateWithLifecycle()
+            val profile = container.profiles?.session?.collectAsStateWithLifecycle()?.value
+            val initialProfile = remember { profile?.databaseName }
+            val cleanupScope = rememberCoroutineScope()
             val savedContent = rememberSaveableStateHolder()
             val shouldProtect = privacy.settings.protectScreen || privacy.hidesContent
             SideEffect { updateScreenPolicy(shouldProtect) }
             FinanceGenieTheme {
-                if (privacy.hidesContent) LockedScreen(privacy) { authenticate(false) }
-                else savedContent.SaveableStateProvider("ledger") {
+                if (initialProfile != profile?.databaseName) {
+                    androidx.compose.material3.CircularProgressIndicator()
+                    LaunchedEffect(profile?.databaseName) {
+                        // Drop every old ledger draft, cached report and auth grant before recreation.
+                        viewModelStore.clear()
+                        recreate()
+                    }
+                } else if (privacy.hidesContent) LockedScreen(privacy) { authenticate(false) }
+                else savedContent.SaveableStateProvider(profile?.databaseName ?: "ledger") {
                     FinanceGenieApp(ledgerModel, privacy, privacyModel, ::authenticate)
+                    if (profile?.cleanupPending == true) androidx.compose.material3.AlertDialog(onDismissRequest = {},
+                        title = { androidx.compose.material3.Text(getString(R.string.recovery_title)) },
+                        text = { androidx.compose.material3.Text(getString(R.string.recovery_cleanup_failed)) },
+                        confirmButton = { androidx.compose.material3.TextButton(onClick = { cleanupScope.launch { container.profiles?.retryCleanup() } }) {
+                            androidx.compose.material3.Text(getString(R.string.retry))
+                        } })
                 }
             }
         }

@@ -101,3 +101,29 @@ Step 7 acceptance on the same phone:
 Step 7 is PASS. Versioned full backup/restore, safe CSV report export and local
 deletion are Step 8. Human CSV-specific TalkBack review joins the full-app Gate A
 walkthrough; prior startup/trace, budget-save and OS backup checks remain open.
+
+Step 8 acceptance on the same phone:
+
+- [x] Explicit plaintext disclosure before JSON/CSV save pickers; successful
+  provider write/close and preview/cancel/recreation behavior.
+- [x] Versioned JSON with exact integer strings, mandatory counts/checksum,
+  bounded input/entities/fields and strict encoding/types/references.
+- [x] 1,000-row round trip preserves IDs/fields, notes/tombstones, transfers/linked
+  refunds, budgets/observations and exact totals; invalid input preserves current data.
+- [x] New local identity consistently remaps replay keys; minimal CSV ownership/
+  revision guards preserve edits, undone status, matched originals and safe restore.
+- [x] Failed staged insert and stale replacement/deletion confirmations are atomic;
+  old repositories/drafts/cache cannot write into a replacement profile.
+- [x] Actual uninstall/reinstall of a separate synthetic app proves fresh-install
+  recovery from the same exported bytes, followed by a verified fresh reader.
+- [x] Process stops during staged insertion, after restore publication and after
+  deletion publication preserve the selected complete/empty ledger and resume cleanup.
+- [x] Local deletion removes old app-owned databases/sidecars and keeps exported
+  documents/security settings. CSV report has 999 active rows, formula text escaped.
+- [x] A thrown cleanup error keeps completion pending; retry removes the old files
+  before clearing the warning.
+- [x] Four recovery UI checks including actual pickers and 200% dark dialog pass;
+  all existing entry/privacy/budget/analytics/CSV regressions pass.
+
+Step 8 is PASS. Gate A still requires its startup/trace, budget-save, full-app
+accessibility, supported-device and actual OS backup checks in Step 9.

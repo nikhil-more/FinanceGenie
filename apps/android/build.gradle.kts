@@ -35,6 +35,12 @@ android {
             isDebuggable = false
             matchingFallbacks += listOf("release")
         }
+        create("recoveryCheck") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".recoverycheck"
+            versionNameSuffix = "-recovery-check"
+            matchingFallbacks += listOf("debug")
+        }
     }
 
     testBuildType = providers.gradleProperty("financegenieTestBuildType").getOrElse("debug")
@@ -92,6 +98,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.gson)
     ksp(libs.androidx.room.compiler)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
