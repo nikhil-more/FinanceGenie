@@ -50,8 +50,6 @@ class ReleaseAcceptanceTest {
             compose.onNodeWithTag("add_account").performClick()
             compose.field("field_name", name); compose.choose("field_kind", kind.name)
             compose.field("field_amount", "0")
-            androidx.test.espresso.Espresso.closeSoftKeyboard()
-            compose.waitForIdle()
             compose.field("field_date", "2026-11-01"); compose.saveForm()
         }
         val accounts = container.repository.read().accounts.associate { it.value.name to it.value.id }

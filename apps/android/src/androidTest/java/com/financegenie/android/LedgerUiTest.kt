@@ -93,7 +93,6 @@ internal fun ComposeContentTestRule.field(tag: String, value: String) {
     }
 }
 internal fun ComposeContentTestRule.choose(tag: String, id: String) {
-    androidx.test.espresso.Espresso.closeSoftKeyboard()
     waitTag(tag)
     onNodeWithTag(tag).performScrollTo().performClick()
     val choice = SemanticsMatcher("A chooser option") {
@@ -106,7 +105,6 @@ internal fun ComposeContentTestRule.choose(tag: String, id: String) {
     waitNoTag("choice_$id")
 }
 internal fun ComposeContentTestRule.saveForm() {
-    androidx.test.espresso.Espresso.closeSoftKeyboard()
     onNodeWithTag("save_form").assertIsDisplayed().assertIsEnabled().performClick()
     waitUntil(15_000) {
         onAllNodes(hasTestTag("ledger_form")).fetchSemanticsNodes().isEmpty() ||

@@ -129,9 +129,17 @@ class RecoveryPickerUiTest {
             compose.onNodeWithTag("recovery_confirm").performClick()
             assertTrue(device.wait(Until.hasObject(By.clazz("android.widget.EditText")), 10_000))
             downloads()
-            device.wait(Until.findObject(By.clazz("android.widget.EditText")), 5_000).text = "$baseName.$extension"
-            click(By.text(java.util.regex.Pattern.compile("save", java.util.regex.Pattern.CASE_INSENSITIVE)))
-            compose.waitUntil(15_000) { compose.recoveryModel().recovery!!.state.value.message == R.string.recovery_exported }
+            val filename = "$baseName.$extension"
+            device.wait(Until.findObject(By.clazz("android.widget.EditText")), 5_000).text = filename
+            assertTrue("The synthetic filename was not accepted", device.wait(Until.hasObject(By.clazz("android.widget.EditText").text(filename)), 5_000))
+            val save = By.text(java.util.regex.Pattern.compile("save", java.util.regex.Pattern.CASE_INSENSITIVE)).enabled(true)
+            click(save)
+            assertTrue("The save picker did not close", device.wait(Until.gone(By.clazz("android.widget.EditText").text(filename)), 15_000))
+            try {
+                compose.waitUntil(15_000) { compose.recoveryModel().recovery!!.state.value.message == R.string.recovery_exported }
+            } catch (error: androidx.compose.ui.test.ComposeTimeoutException) {
+                throw AssertionError("Synthetic $extension export did not finish: ${compose.recoveryModel().recovery!!.state.value}", error)
+            }
         }
         save("recovery_backup", "json")
         save("recovery_csv", "csv")

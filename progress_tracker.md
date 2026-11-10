@@ -355,97 +355,65 @@ architecture decisions live in [the decision record](docs/decisions.md).
 
 ### Step 9 — Offline acceptance and personal-use Gate A
 
-- **Decision in progress:** Verify the production container in an isolated,
-  non-debuggable release-like candidate. Keep the normal development ledger intact;
-  locally signed test artifacts do not configure distribution signing/publication.
-- **Performance:** The first current 10,000-record run confirms all twenty cold
-  launches at 775.52 ms P95 and thirty expense saves at 296.89 ms P95. The startup
-  driver removes generic UIAutomator idle waits while retaining frame/launch/PID
-  correlation and exact visible-value verification. Preserve the earlier 2.28 s
-  result and explain this measurement correction; do not rename it AndroidX TTFD.
-- **Accepted tradeoff:** Budget Save-to-visible P95 is 314.52 ms over thirty edits.
-  The user explicitly accepted approximately 315 ms on 10 November 2026. Preserve
-  its original 300 ms miss, accept this baseline for personal use, and omit the
-  additional report-caching optimization. Other timing targets stay unchanged.
-- **Coverage:** Remote SDK setup is repaired and all variants compile in CI.
-  The first API 26 run exposed ICU currency-spacing differences in UI assertions;
-  allow only the non-breaking space after ₹ while retaining exact signs/digits.
-  The API 34 suite exceeded its host command timeout; allow ten minutes for the
-  whole UI suite without changing per-check waits or financial timing targets.
-  Both corrected emulator runs remain pending. This workspace has no emulator/KVM
-  and only limited free disk.
-  Physical A063/API 35 checks and the full-app human accessibility review remain
-  independent evidence. No emulated performance result substitutes for the phone.
-- **Backup verification:** Actual Android framework extraction on API 35 produced
-  zero candidate bytes for both cloud and device-transfer destinations. The
-  isolated positive control produced 39,484 bytes for each destination and
-  contained all six CE/DE file, preference and database canaries. The phone's
-  disabled backup setting was preserved and the control was uninstalled.
-  Any reflection permission is confined to the instrumentation process. This does
-  not claim a physical OEM transfer or cloud restore that was not performed.
-- **Verification:** 86 JVM tests and debug lint pass after removing the extra
-  calculation cache; the financial engine and schema are unchanged. Release
-  smoke/restart, supported-version CI, full-app accessibility and final
-  packaging/log checks remain in progress.
-- **Phone investigation:** The candidate exits through Android Back handling
-  before the first UI input. Earlier attempts overlapped the user's phone use;
-  the issue also recurred after readiness was reported. The user then identified
-  their app blocker as the cause and is whitelisting the variant/helper packages.
-  The package list is in the acceptance guide. A temporary candidate-only finish
-  trace was removed; production behavior is unchanged. Phone automation is paused
-  until whitelisting is confirmed. The three completed benchmark packages were
-  removed; normal Dev data remains intact.
-- **Release CI follow-up:** Both emulators reached the exact six-event golden
-  totals and ₹1,501 remaining budget, then exposed a test trying to find an
-  uncomposed off-screen transaction directly. Scroll the lazy list to its tag
-  before edit/delete. The complete journeys and remaining suites still need a
-  successful rerun. Cache trusted push builds to avoid repeated dependency work;
-  pull-request workflows remain read-only for the cache.
-- **Further harness corrections:** The next run passed edit/delete/undo and
-  exposed Settings restoring the Categories route that the test had left open.
-  Return to Settings before switching tabs, respecting the app's saved navigation.
-  A phone run after whitelisting still exited after its fresh reinstall. The
-  blocker may discard per-install rules, so `--reuse-candidate` now verifies both
-  installed APK hashes and clears only synthetic candidate data while retaining
-  its installation/UID. CI still uses fresh installs; phone readiness is pending
-  rechecking the current install's blocker rule.
-- **Current release evidence:** Full golden/recovery/delete/fresh-reader journeys
-  pass on API 26 and API 34. Installed-rules cloud/device-transfer extraction and
-  its positive control pass on API 34. The remaining red checks are API 26's
-  forced-agent legacy setup and two existing API 34 UI assumptions. Android 8
-  omits the XML resource when backup is disabled, so test real service eligibility
-  separately, then explicitly label a copied-metadata XML extraction test. Scroll
-  the account's owed label into view on shorter screens and retain exact search
-  assertions with better synthetic diagnostics. Production behavior remains
-  unchanged; these corrected checks still require successful reruns.
-- **Latest supported-API results:** API 26's actual BackupManager query now
-  rejects the candidate and accepts its control; the separate declared-XML
-  extraction passes. API 34 passes all 35 storage, 23 core/budget/analytics UI
-  tests and two fresh-process checks, plus release/recovery/framework checks.
-  Remaining failures are asynchronous/lazy-list assumptions in CSV tests and
-  API 26 management synchronization/supplemental dialog images. Wait for actual
-  controller/UI completion and scroll to targets without changing expected
-  financial values. Mark only unsupported pre-28 dialog PNGs unavailable; keep
-  every large-font interaction assertion. Full CI and phone/manual checks remain
-  open until the corrected regressions pass.
-- **Small-screen follow-up:** API 26 now passes the large-font interaction test
-  with its unsupported optional dialog image explicitly marked. Management's
-  edit button is covered by the archive snackbar on the shorter viewport; dismiss
-  the notice before editing. A release rerun also exposed an uncomposed account
-  option in a chooser. Close the keyboard, wait for the chooser list, scroll to
-  the exact option, and wait for it to close. Keep all original selections and
-  assertions; these latest harness fixes still need their matrix rerun.
-- **CI iteration tradeoff:** Run the four independent device drivers sequentially
-  even when one fails, retaining a failing aggregate exit status. This exposes
-  downstream compatibility failures in the same run rather than stopping at the
-  first suite. The wrapper requires CI and an emulator, and four host-only mocked
-  checks verify both refusal guards and sticky failure/all-pass behavior. These
-  checks do not stand in for any actual device test.
+- **Decision:** Exercise the production container in a separate, non-debuggable,
+  locally signed acceptance app. Preserve the normal Dev ledger/preferences.
+  Distribution signing and publication are outside this step.
+- **Performance:** Twenty confirmed cold launches give 775.52 ms P95; thirty
+  expense saves give 296.89 ms P95. The startup driver removes generic automation
+  idle waiting while retaining frame/nonce/PID correlation and exact visible
+  values. This corrects measurement overhead, not application speed. Retain the
+  earlier 2.28 s result and incomplete AndroidX 14/20 trace diagnostic separately.
+- **Accepted tradeoff:** The user accepted budget Save P95 314.52 ms (~315 ms)
+  across thirty edits on 10 November 2026. Preserve the original 300 ms miss;
+  extra report caching was removed. Other targets remain unchanged. APK hashes
+  identify the measured baseline; later input/test changes are not retroactive
+  measurements. Sampled PSS is not a continuous production-only memory bound.
+- **Backup evidence:** API 35 framework extraction produces zero candidate bytes
+  for cloud and device transfer. Its permissive control produces 39,484 bytes
+  per destination, containing all six CE/DE canaries. The phone's backup setting
+  stays disabled and the control is removed. API 34 verifies installed rules too.
+  API 26's actual BackupManager rejects the candidate and accepts the control;
+  a separately labelled copied-metadata check verifies declared legacy XML.
+  These do not claim an unperformed physical OEM migration or cloud restore.
+- **Supported Android coverage:** SDK setup is fixed; all variants build in CI.
+  Full release/recovery/delete/fresh-reader journeys have passed on API 26/34.
+  Run [42799414119](https://github.com/nikhil-more/FinanceGenie/actions/runs/42799414119)
+  passes CSV/picker/interrupted-import recovery on both versions. API 34 also
+  passes the complete recovery driver. Both jobs remain red because search edits
+  revert, API 34 hits an unfocused-root keyboard action, and API 26's recovery
+  save picker times out. The next run must verify the corrections below.
+- **Search correction:** The old text field read its value from background report
+  results. A synchronous Compose input value now updates with the bounded filter
+  selection; reports still calculate off the main thread. A focused regression
+  holds the report snapshot fixed through replacement, clearing and the existing
+  200-character bound. Financial arithmetic and Room schema are unchanged.
+- **Harness tradeoffs:** Scroll containing lazy lists before locating uncomposed
+  rows/options; wait for actual controller/rendered state; dismiss confirmations
+  covering row buttons. Match only API 26's currency-space variation, retaining
+  exact money. Unsupported pre-28 dialog PNGs are explicitly unavailable while
+  every large-font interaction still runs. Avoid Espresso's unfocused-root
+  keyboard action; verify filename, enabled Save and picker closure. CI runs all
+  independent drivers sequentially and fails if any fails; it never hides a failure.
+- **Phone status:** The user identified their app blocker and whitelisted all
+  variants/helpers. Reinstallation may discard that rule. The driver now checks
+  installed APK hashes and uses `--reuse-candidate` to reset only synthetic data,
+  retaining installation/UID. The user reconfirmed that the current install stays
+  open, but the updated in-place run still has no initial Compose screen. Phone
+  automation is paused for a temporary blocker pause; the next retry will use
+  the still-empty candidate without reinstalling or clearing it. Benchmark packages
+  and temporary finish tracing were removed; normal Dev data/settings are intact.
+- **Host verification:** 86 JVM tests, debug/test builds and lint pass after the
+  input correction. Acceptance/control/recovery app/test builds pass. The final
+  supported-API, phone regression, human TalkBack/privacy and packaging checks
+  remain required before Gate A can pass. See the [verification log](docs/verification-log.md).
+- **Revisit:** Material latency regression, normal-use memory pressure, Android/
+  Compose/schema upgrades, new OEM backup behavior or a separate distribution
+  requirement. Current scope is one person's offline ledger.
 
 ## Current actions and outstanding checks
 
-1. Finish the release-like golden UI journey/fresh reader once app-blocker
-   whitelisting is confirmed, then complete the full-app human walkthrough.
+1. Finish the retained-installation phone acceptance and final regressions, then
+   complete the full-app human TalkBack/device-credential/privacy walkthrough.
 2. Finish the API 26/34 CI checks and record their actual outcomes. Steps 0–8 are
    complete; Gate A remains IN PROGRESS until the required checks pass.
 3. Startup confirmation and backup extraction now have independent complete

@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -18,11 +19,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.financegenie.android.domain.TransactionKind
 import com.financegenie.android.privacy.PrivacyViewModel
 import com.financegenie.android.ui.FinanceGenieApp
+import com.financegenie.android.ui.ActivityFilters
+import com.financegenie.android.ui.LedgerFilters
+import com.financegenie.android.ui.LedgerUiState
 import com.financegenie.android.ui.LedgerViewModel
 import com.financegenie.android.ui.theme.FinanceGenieTheme
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
+import kotlinx.coroutines.runBlocking
+import java.time.YearMonth
 
 class LayoutUiTest {
     @get:Rule(order = 0) val data = TestLedgerRule(seed = { repository ->
@@ -36,6 +42,28 @@ class LayoutUiTest {
     private val store = ViewModelStore()
 
     @After fun clearModels() { compose.runOnUiThread { store.clear() } }
+
+    @Test fun searchReplacementsStayVisibleWhileTheReportSnapshotIsUnchanged() {
+        lateinit var model: LedgerViewModel
+        compose.runOnUiThread {
+            model = ViewModelProvider(store, object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = LedgerViewModel(data.repository, uiClock) as T
+            })[LedgerViewModel::class.java]
+            model.filter { it.copy(search = "Before") }
+        }
+        // Keep the report at its old selection: text entry must not depend on
+        // a background report completing before the next input frame.
+        val report = LedgerUiState(LedgerFilters(YearMonth.of(2026, 11), search = "Before"),
+            loading = false, ledger = runBlocking { data.repository.read() })
+        compose.setContent { FinanceGenieTheme { ActivityFilters(report, model, expandable = false) } }
+        val field = compose.onNodeWithTag("search_transactions")
+        field.assertTextEquals("Search merchant or notes", "Before")
+        listOf("L", "Lunch", "100%_literal", "", "x".repeat(201)).forEach { input ->
+            field.performTextReplacement(input)
+            field.assertTextEquals("Search merchant or notes", input.take(200))
+        }
+    }
 
     @Test fun twoHundredPercentFontDarkAndLightModesKeepNavigationAndFormsUsable() {
         lateinit var ledger: LedgerViewModel

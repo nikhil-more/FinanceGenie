@@ -163,6 +163,10 @@ memory or smoothness guarantee.
 The report hashes identify the measured APKs. Later test-only assertions that the
 matched expense/budget text is displayed are not retroactive measurements of a
 different test APK.
+The later Gate A search-entry fix gives the text field an immediate Compose value
+instead of feeding it the background report's previous selection. It changes no
+financial calculation or report requests. The recorded APK hashes identify the
+baseline before that input fix; they are not measurements of a later candidate.
 
 ## Build and run
 

@@ -1,6 +1,9 @@
 package com.financegenie.android.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.financegenie.android.R
@@ -81,6 +84,9 @@ class LedgerViewModel(private val repository: LedgerRepository, private val cloc
     val recovery = profiles?.let { RecoveryController(it, clock, viewModelScope) }
     private val calculator = LedgerCalculator(clock)
     private val filters = MutableStateFlow(LedgerFilters(YearMonth.from(LedgerDates.today(clock))))
+    // Text entry must reach the next frame without waiting for report calculation.
+    var searchInput by mutableStateOf("")
+        private set
     private val reload = MutableStateFlow(0)
     private val loaded = reload.flatMapLatest {
         repository.observe().map { LoadResult(it) }
@@ -153,7 +159,9 @@ class LedgerViewModel(private val repository: LedgerRepository, private val cloc
 
     fun retry() { reload.value += 1 }
     fun filter(change: (LedgerFilters) -> LedgerFilters) {
-        filters.value = change(filters.value).let { it.copy(search = it.search.take(200)) }
+        val selection = change(filters.value).let { it.copy(search = it.search.take(200)) }
+        searchInput = selection.search
+        filters.value = selection
     }
     fun moveMonth(delta: Long) {
         val month = filters.value.month.plusMonths(delta)

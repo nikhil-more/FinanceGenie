@@ -860,5 +860,29 @@ are maintained in [progress_tracker.md](../progress_tracker.md).
   known Compose pre-28 dialog-image exception marks only supplemental captures
   unavailable; large-font save/cancel/value assertions still execute. These last
   corrections compile locally; their complete matrix rerun is pending.
+- **Complete-suite CI diagnostic:** [Run 42799414119](https://github.com/nikhil-more/FinanceGenie/actions/runs/42799414119)
+  passes the host build and CSV import/picker/interrupted-commit checks on both
+  API 26/34. API 26 also passes release/restart/framework, 35 storage, 12 core and
+  five budget UI tests; its analytics text replacement and recovery save picker
+  still fail. API 34 passes storage and the complete recovery driver, but a chooser
+  hits Espresso's unfocused-root keyboard action and core search replacement
+  reverts to the previous input. Neither emulator job passes overall.
+- **Search defect and focused correction:** Search text was read from the
+  background-calculated report state. Both APIs now supplied concrete diagnostics
+  showing the old editable text after replacement. Keep immediate Compose input
+  in the shared ViewModel while reports continue asynchronously. A new regression
+  freezes the report snapshot and checks replacement, clearing, literal text and
+  the existing 200-character bound. Financial arithmetic and schema are unchanged.
+- **Automation follow-up:** Chooser/form actions use existing scrolling and the
+  IME-aware form layout, avoiding Espresso's unfocused-root keyboard action.
+  Recovery picking verifies the exact synthetic filename, enabled Save action and
+  picker closure, and reports sanitized controller state if export never finishes.
+  The next matrix run must verify these changes. Current host build, 86 JVM tests
+  and lint pass (`/tmp/financegenie-step9-input-picker-build.log`). The retained
+  phone app/test APK updates both succeed and their hashes match. After synthetic
+  data reset, the smoke test still times out before its first Compose screen;
+  it is not a pass (`/tmp/financegenie-step9-preserved-acceptance.log`). Phone
+  automation is paused for a temporary blocker pause. The next retry will retain
+  this still-empty installation and data, avoiding another reset/update.
 - **Status:** Gate A remains IN PROGRESS until the release journey/fresh reader,
   supported-version checks and full-app human accessibility/privacy review pass.

@@ -62,7 +62,7 @@ import kotlin.math.abs
             Text(pluralStringResource(R.plurals.activity_count, count, count), modifier = Modifier.testTag("activity_count"))
         }
         if (expanded) {
-            FormField(state.filters.search, { query -> model.filter { it.copy(search = query) } }, R.string.search_transactions, "search_transactions")
+            FormField(model.searchInput, { query -> model.filter { it.copy(search = query) } }, R.string.search_transactions, "search_transactions")
             ChoiceField(stringResource(R.string.account), state.filters.accountId?.toString() ?: "all",
                 listOf(Choice("all", stringResource(R.string.all_accounts))) + ledger.accounts.map { Choice(it.value.id.toString(), it.value.name) }, "filter_account") { id ->
                 model.filter { it.copy(accountId = id.takeUnless { it == "all" }?.let(UUID::fromString)) }

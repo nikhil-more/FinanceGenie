@@ -406,6 +406,14 @@ References checked for this implementation:
   has no KVM/system images and limited disk. Physical API 35 performance and human
   TalkBack/device-credential checks remain separate evidence. Request supported
   SDK packages explicitly; the setup action's v3 default includes removed `tools`.
+- **Search entry:** Keep a synchronous Compose text value in the shared ViewModel,
+  updated together with the bounded report selection. Reading text back from the
+  background-calculated report caused edits to revert on both supported APIs.
+  Reports still calculate off the main thread; amounts, matching and the 200-character
+  bound are unchanged. A regression holds the report snapshot fixed while replacing,
+  clearing and bounding the visible input. This follows
+  [Android's guidance for value-based text fields](https://medium.com/androiddevelopers/effective-state-management-for-textfield-in-compose-d6e5b070fbe5).
+  Revisit when migrating the pinned Compose version or its text-field APIs.
 - **Revisit:** Normal-use memory pressure, an Android/toolchain/schema upgrade,
   a changed OEM backup implementation or separately authorized distribution.
   The current scope remains one person's local ledger.
