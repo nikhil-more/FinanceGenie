@@ -60,6 +60,7 @@ class ReleaseAcceptanceTest {
         compose.onNodeWithTag("manage_categories").performScrollTo().performClick()
         compose.onNodeWithTag("add_category").performClick(); compose.field("field_name", "Food"); compose.saveForm()
         val food = container.repository.read().categories.single { it.value.name == "Food" }.value.id
+        compose.onNodeWithTag("back").performClick()
         compose.onNodeWithTag("tab_overview").performClick()
         compose.addEvent(TransactionKind.INCOME, "60000", "Synthetic Salary", bank, date = "2026-11-02")
         compose.addEvent(TransactionKind.EXPENSE, "2750.25", "Synthetic Groceries", bank, food, date = "2026-11-02")

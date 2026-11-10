@@ -401,6 +401,14 @@ architecture decisions live in [the decision record](docs/decisions.md).
   before edit/delete. The complete journeys and remaining suites still need a
   successful rerun. Cache trusted push builds to avoid repeated dependency work;
   pull-request workflows remain read-only for the cache.
+- **Further harness corrections:** The next run passed edit/delete/undo and
+  exposed Settings restoring the Categories route that the test had left open.
+  Return to Settings before switching tabs, respecting the app's saved navigation.
+  A phone run after whitelisting still exited after its fresh reinstall. The
+  blocker may discard per-install rules, so `--reuse-candidate` now verifies both
+  installed APK hashes and clears only synthetic candidate data while retaining
+  its installation/UID. CI still uses fresh installs; phone readiness is pending
+  rechecking the current install's blocker rule.
 
 ## Current actions and outstanding checks
 

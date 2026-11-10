@@ -39,6 +39,14 @@ while automated UI checks run. `--smoke-only` and `--backup-only` can reproduce 
 independent checks; the summary explicitly records which checks ran. The driver
 rejects failed, skipped and missing mandatory tests.
 
+If an app blocker forgets its whitelist after reinstallation, install the current
+candidate and test APKs first, whitelist them, then add `--reuse-candidate`.
+This verifies both installed APK hashes and clears only the disposable candidate's
+synthetic data before smoke testing, retaining its installation/UID. Backup-only
+mode does not clear data. The summary records reuse/reset explicitly; a data reset
+is not described as a fresh uninstall/reinstall. CI still uses fresh installations,
+and the independent recovery drill covers actual uninstall/reinstall recovery.
+
 The smoke test starts empty, creates bank/cash/card accounts and Food, enters the
 six golden events through the forms, and independently expects:
 
