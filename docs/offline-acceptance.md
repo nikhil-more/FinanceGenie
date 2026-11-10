@@ -104,6 +104,10 @@ agent extraction. Modern cloud/device-transfer extraction uses installed rules.
 
 CI builds the APKs once and runs the local storage/UI, CSV, recovery and acceptance
 drivers on API 26 and API 34 emulators. The physical reference phone is API 35.
+The CI-only aggregate runs each independent suite sequentially even if another
+fails, and exits unsuccessfully if any required suite failed. This collects all
+remaining compatibility issues in one run without masking failures. It refuses
+to run outside CI or against a physical device.
 Emulator checks establish behavior, not physical-phone performance or human
 accessibility. SDK setup requests `platform-tools` explicitly because the
 [action's v3 default](https://github.com/android-actions/setup-android/blob/v3/action.yml)

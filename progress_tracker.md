@@ -435,6 +435,12 @@ architecture decisions live in [the decision record](docs/decisions.md).
   option in a chooser. Close the keyboard, wait for the chooser list, scroll to
   the exact option, and wait for it to close. Keep all original selections and
   assertions; these latest harness fixes still need their matrix rerun.
+- **CI iteration tradeoff:** Run the four independent device drivers sequentially
+  even when one fails, retaining a failing aggregate exit status. This exposes
+  downstream compatibility failures in the same run rather than stopping at the
+  first suite. The wrapper requires CI and an emulator, and four host-only mocked
+  checks verify both refusal guards and sticky failure/all-pass behavior. These
+  checks do not stand in for any actual device test.
 
 ## Current actions and outstanding checks
 

@@ -126,10 +126,7 @@ jobs:
           ram-size: 3072M
           disable-animations: true
           script: |
-            python3 scripts/verify_acceptance_on_device.py --output /tmp/release-acceptance
-            python3 scripts/verify_storage_on_device.py --ui
-            python3 scripts/verify_csv_on_device.py --output /tmp/csv-acceptance
-            python3 scripts/verify_recovery_on_device.py --output /tmp/recovery-acceptance
+            bash scripts/verify_ci_emulator.sh
       - name: Upload synthetic device-check results
         if: always()
         uses: actions/upload-artifact@v4
