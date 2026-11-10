@@ -1,12 +1,15 @@
 # FinanceGenie progress tracker
 
-Updated 9 November 2026. Product scope and financial rules live in [plan.md](plan.md).
+Updated 10 November 2026. Product scope and financial rules live in [plan.md](plan.md).
 This file owns the current step status, next actions and tradeoffs. Detailed test
 commands/results live in [the verification log](docs/verification-log.md); durable
 architecture decisions live in [the decision record](docs/decisions.md).
 
 ## Working agreement
 
+- FinanceGenie is for the user's individual use: one person's private ledger and
+  their own cash/bank/card accounts. Keep flows simple; team spaces, shared-account
+  workflows, organizational roles and business administration are outside scope.
 - Current implementation scope is milestone A, the offline Android app. Later
   milestones are tracked but need their own scope decision.
 - The user will connect their physical phone whenever device testing is required.
@@ -34,7 +37,7 @@ architecture decisions live in [the decision record](docs/decisions.md).
 | 4 | Accounts, manual transactions and navigation | PASS | 45 JVM tests, 12 phone UI tests, restart probes and user-confirmed lock/preview/TalkBack checks pass | Below |
 | 5 | Calendar budgets | PASS | 55 JVM tests, 23 phone storage tests, 17 UI tests and expense/budget restart probe pass; schema unchanged | Below |
 | 6 | Offline overview and analytics | PASS | 66 JVM, 27 storage, 23 UI tests and fresh-process checks pass; 20-launch/30-operation baseline recorded, with startup limitation retained for Gate A | Below |
-| 7 | CSV preview/import/undo | NOT STARTED | After Step 6 | Record when started |
+| 7 | CSV preview/import/undo | PASS | 79 JVM, 35 phone storage, 31 UI tests and four fresh-reader checks pass; 10,000-row import verified in 5.25s | Below |
 | 8 | Backup, restore, export and local deletion | NOT STARTED | After Step 7 | Record when started |
 | 9 | Offline acceptance / Gate A | NOT STARTED | Requires Steps 0–8 and phone evidence | Record when started |
 | 10 | Supported notification parsers | NOT STARTED | B scope decision after A | Record when started |
@@ -253,9 +256,55 @@ architecture decisions live in [the decision record](docs/decisions.md).
   [aggregate baseline](docs/performance-baseline.json) and
   [verification](docs/verification-log.md#step-6--offline-analytics-and-performance-baseline--2026-11-09).
 
+### Step 7 — Previewed and reversible CSV imports
+
+- **Decision:** Use the system document picker, a bounded pure parser
+  and an in-memory preview. Date formats and mappings are explicit. Debits need
+  confirmed expense classification; credits require income/refund/transfer review.
+- **Identity/matching:** Retain hashed file/mapping/row/reference provenance only.
+  Identical legitimate rows keep independent occurrences. Existing financial events
+  are suggested for review, including both transfer legs, rather than duplicated
+  automatically. A previously committed file cannot bypass replay protection by
+  selecting another mapping/account; an undone batch offers explicit restoration.
+- **Storage:** Reuse v1's reserved batch/evidence/change-receipt tables without a
+  schema change. Commit accepted rows/evidence/batch status in one revision-checked
+  transaction. Undo/restore rejects modified records or new links and never rewrites
+  unrelated existing financial events. Generic undo cannot bypass batch safeguards.
+- **Alternative/reason:** Reject automatic credit classification, merchant-only
+  duplicate matching and silent partial replay. Same-leg/date/amount suggestions
+  catch manual entries and opposite transfer descriptions even when wording differs;
+  explicit review costs extra taps but avoids silent double counting.
+- **Tradeoff:** Preview data and review choices survive rotation in memory, but are
+  discarded on cancellation/process death. No original file or durable URI grant
+  is retained. Unknown/invalid rows stay excluded with visible counts/reasons.
+- **Subset policy:** A committed subset reserves the whole original file identity
+  across accounts/mappings. Import remaining rows from a reduced/corrected file,
+  reviewing overlap; an undone batch offers explicit restore. This favors simple
+  replay safety over appending more rows from an already committed file.
+- **Verification:** 79 JVM tests, 35 storage and 31 UI tests pass on the A063, plus
+  four fresh-reader verifications: storage persistence, expense/budget persistence,
+  real interrupted-commit rollback and durable undone replay/restore. The 100-row
+  corpus accepts 83 (81 new + two matches), leaves seven for review/ten invalid and
+  yields exact ₹765.50 spending/₹20 income. Picker selection verifies exact content;
+  cancel, stale/racing writes, disk-full rollback, edited tombstones/new links,
+  repeated undo/restore and 200% dark review controls pass. A regression exposed
+  one stale test asset path; both ledger fixture consumers now use the namespaced
+  path with unchanged financial assertions. Debug/release/test builds and lint pass;
+  normal APKs contain no test fixtures/hooks or new sensitive permission.
+- **Performance:** One release-based, non-debuggable/profileable 10,000-row import
+  into 10,000 existing events reaches 20,000 exactly verified events in **5,253.70ms**,
+  below 15,000ms. Provider/download and human review time are excluded. One sample
+  is not a P95; 78,251 KiB sampled PSS is not a continuous peak.
+- **Revisit:** Real bank adapters, measured import regressions and Step 8 restore
+  identity remapping. Full-app human accessibility and Gate A performance/recovery
+  checks remain open. [Behavior](docs/csv-import.md),
+  [baseline](docs/csv-performance-baseline.json),
+  [verification](docs/verification-log.md#step-7--previewed-reversible-csv-imports--2026-11-10).
+
 ## Current actions and outstanding checks
 
-1. Implement CSV preview/import/undo (Step 7).
+1. Implement versioned JSON backup/restore, safe CSV report export and local
+   deletion (Step 8), including a fresh-install recovery drill before real data.
 2. Before Gate A, address startup confirmation/trace limits and measure budget-save
    latency. Do not claim a twenty-run AndroidX TTFD result from the incomplete capture.
 3. Device-backup behavior remains a later Gate A check; never commit a full phone

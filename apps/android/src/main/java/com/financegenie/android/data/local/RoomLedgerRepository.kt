@@ -12,6 +12,11 @@ import com.financegenie.android.data.StoredLedger
 import com.financegenie.android.data.TransactionRecord
 import com.financegenie.android.data.TransactionSource
 import com.financegenie.android.data.TransactionWrite
+import com.financegenie.android.data.ImportBatchRecord
+import com.financegenie.android.data.CsvReplayException
+import com.financegenie.android.data.CsvUndoConflict
+import com.financegenie.android.csv.CsvImportRequest
+import com.financegenie.android.csv.planCsvImport
 import com.financegenie.android.domain.BalanceObservation
 import com.financegenie.android.domain.DateRange
 import com.financegenie.android.domain.LedgerAccount
@@ -108,6 +113,11 @@ class RoomLedgerRepository(
         evidence: List<SourceEvidenceInput>,
     ): UUID = mutate { before ->
         require(changes.isNotEmpty()) { "A change group must contain a transaction" }
+        writeGroup(before, changes, evidence)
+    }
+
+    private suspend fun writeGroup(before: StoredLedger, changes: List<TransactionWrite>, evidence: List<SourceEvidenceInput>, referenceReceipts: Boolean = false): UUID {
+        require(changes.isNotEmpty() || evidence.isNotEmpty())
         require(changes.map { it.transaction.id }.distinct().size == changes.size) { "Change group IDs must be unique" }
         val oldById = before.transactions.associateBy { it.transaction.id }
         val prepared = changes.map { change ->
@@ -132,9 +142,14 @@ class RoomLedgerRepository(
             if (write.previous == null) dao.insertTransaction(write.current.toEntity())
             else dao.updateTransaction(write.current.toEntity())
         }
-        dao.insertItems(prepared.map { write ->
+        val items = prepared.map { write ->
             ChangeItemEntity(groupId, write.current.transaction.id, write.current.metadata.revision, write.previous?.toEntity())
-        })
+        } + if (!referenceReceipts) emptyList() else evidence.map { it.transactionId }.distinct()
+            .filterNot { id -> prepared.any { it.current.transaction.id == id } }.map { id ->
+                val record = requireNotNull(oldById[id])
+                ChangeItemEntity(groupId, id, record.metadata.revision, record.toEntity())
+            }
+        dao.insertItems(items)
         val automatic = prepared.filter { it.previous == null && it.current.details.source == TransactionSource.MANUAL }
             .map { write ->
                 SourceEvidenceInput(UUID.randomUUID(), write.current.transaction.id, TransactionSource.MANUAL, "manual:${write.current.transaction.id}")
@@ -151,11 +166,12 @@ class RoomLedgerRepository(
         dao.insertEvidence(inputs.map { input ->
             SourceEvidenceEntity(input.id, input.transactionId, input.source, input.sourceKey, input.importBatchId, groupId, clock.millis())
         })
-        groupId
+        return groupId
     }
 
     override suspend fun undoTransactionChange(groupId: UUID) {
         mutate { before ->
+            require(dao.importedGroupEvidenceCount(groupId) == 0) { "Use import history to undo an imported batch" }
             val group = requireNotNull(dao.group(groupId)) { "Change group does not exist" }
             check(!group.isUndone) { "Change group has already been undone" }
             val items = dao.items(groupId)
@@ -177,6 +193,52 @@ class RoomLedgerRepository(
             if (detachedIds.isNotEmpty()) dao.detachEvidence(detachedIds)
             dao.markUndone(groupId)
         }
+    }
+
+    override suspend fun commitCsv(request: CsvImportRequest): UUID = mutate { before ->
+        if (before.settings.revision != request.expectedLedgerRevision) throw StaleRecordException()
+        val plan = planCsvImport(before, request, clock)
+        plan.replay?.let { throw CsvReplayException(it) }
+        require(plan.canCommit) { "Review accepted CSV rows before committing" }
+        val batchId = UUID.randomUUID()
+        dao.insertBatch(ImportBatchEntity(batchId, request.accountId, plan.fingerprint, 1, plan.acceptedCount, false, clock.millis()))
+        writeGroup(before, plan.writes, plan.evidence.map { it.copy(importBatchId = batchId) }, referenceReceipts = true)
+        batchId
+    }
+
+    override suspend fun undoCsv(batchId: UUID, expectedLedgerRevision: Long) = changeCsvStatus(batchId, expectedLedgerRevision, restoring = false)
+    override suspend fun restoreCsv(batchId: UUID, expectedLedgerRevision: Long) = changeCsvStatus(batchId, expectedLedgerRevision, restoring = true)
+
+    private suspend fun changeCsvStatus(batchId: UUID, expectedLedgerRevision: Long, restoring: Boolean) = mutate { before ->
+        if (before.settings.revision != expectedLedgerRevision) throw StaleRecordException()
+        val batch = requireNotNull(dao.batch(batchId))
+        require(batch.isUndone == restoring) { "Batch status changed" }
+        val evidence = dao.batchEvidence(batchId)
+        val groupId = evidence.map { it.changeGroupId }.distinct().single()
+        val group = requireNotNull(dao.group(groupId))
+        require(group.isUndone == restoring)
+        val items = dao.items(groupId)
+        val records = before.transactions.associateBy { it.transaction.id }
+        val createdIds = items.filter { it.previous == null }.map { it.transactionId }.toSet()
+        if (!restoring && before.evidence.any { it.isActive && it.input.transactionId in createdIds && it.changeGroupId != groupId }) throw CsvUndoConflict()
+        val updated = items.mapNotNull { item ->
+            val record = records[item.transactionId] ?: throw CsvUndoConflict()
+            val expected = if (restoring && item.previous == null) Math.addExact(item.afterRevision, 1L) else item.afterRevision
+            if (record.metadata.revision != expected || record.transaction.isDeleted != (restoring && item.previous == null)) throw CsvUndoConflict()
+            if (item.previous != null) null else record.copy(transaction = record.transaction.copy(isDeleted = !restoring),
+                metadata = nextMetadata(record.metadata, expected))
+        }
+        val after = records.toMutableMap()
+        updated.forEach { after[it.transaction.id] = it }
+        try { validator.validateChange(before.snapshot, before.snapshot.copy(transactions = after.values.map { it.transaction })) }
+        catch (_: IllegalArgumentException) { throw CsvUndoConflict() }
+        updated.forEach { record ->
+            dao.updateTransaction(record.toEntity())
+            if (restoring) dao.setItemRevision(groupId, record.transaction.id, record.metadata.revision)
+        }
+        dao.setBatchEvidenceActive(batchId, restoring)
+        dao.setBatchUndone(batchId, !restoring)
+        dao.setGroupUndone(groupId, !restoring)
     }
 
     override suspend fun transactions(
@@ -213,6 +275,7 @@ class RoomLedgerRepository(
             budgets = dao.budgets().map { it.toRecord() },
             observations = dao.observations().map { it.toRecord() },
             evidence = dao.evidence().map { it.toRecord() },
+            importBatches = dao.batches().map { ImportBatchRecord(it.id, it.accountId, it.fingerprint, it.acceptedCount, it.isUndone, it.createdAtMillis) },
         ).also { cachedLedger = CachedLedger(it, localChanges, dataVersion) }
     }
 

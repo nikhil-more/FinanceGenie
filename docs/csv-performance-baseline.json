@@ -1,0 +1,33 @@
+{
+  "deviceModel": "A063",
+  "apiLevel": 35,
+  "buildType": "benchmark, non-debuggable, profileable",
+  "compilation": "installed state; warm filesystem cache",
+  "method": "One 10,000-row CSV import into 10,000 existing records; parse, preview, classification, atomic commit and exact verification; human review time excluded",
+  "appApkBytes": 7285638,
+  "appApkSha256": "f71cd9f8cc54a69dfb063d469e0cf633b7ff2f469c902b7403c4c41c31aa99ff",
+  "driverApkSha256": "377b1badb523084edbb2562a1c9e157d2e27254f4b0e305a6676ff9141812073",
+  "testApkSha256": "deb5bad8197e1d10a3066ca26b2b4263932a8336749de6bd3cff5f881102ab2a",
+  "csvImport": {
+    "existingRecords": 10000,
+    "importedRows": 10000,
+    "recordsAfter": 20000,
+    "parseMs": 47.67875,
+    "previewAndClassificationMs": 1646.435729,
+    "atomicCommitMs": 3034.527811,
+    "verificationMs": 525.058802,
+    "totalToVerifiedMs": 5253.701092,
+    "sampledPssKb": 78251
+  },
+  "targetsMet": {
+    "csvImport10000AtMost15000ms": true
+  },
+  "date": "2026-11-10",
+  "observations": 1,
+  "limitations": [
+    "One observation, not a P95 claim.",
+    "Input bytes are prepared in memory; external provider/download latency and human review time are excluded.",
+    "The timed pipeline includes parse, two previews/classification, atomic commit and exact verification into 20,000 final events.",
+    "PSS is sampled after verification rather than continuously measuring a peak."
+  ]
+}

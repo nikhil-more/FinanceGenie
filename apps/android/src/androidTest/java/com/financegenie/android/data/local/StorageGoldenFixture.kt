@@ -18,7 +18,7 @@ import org.json.JSONObject
 internal data class StorageGoldenFixture(val snapshot: LedgerSnapshot, val expected: JSONObject, val month: YearMonth) {
     companion object {
         fun load(): StorageGoldenFixture {
-            val json = InstrumentationRegistry.getInstrumentation().context.assets.open("november-baseline.json")
+            val json = InstrumentationRegistry.getInstrumentation().context.assets.open("ledger/november-baseline.json")
                 .bufferedReader().use { JSONObject(it.readText()) }
             require(Instant.parse(json.text("clockInstant")) == storageClock.instant())
             val snapshot = LedgerSnapshot(

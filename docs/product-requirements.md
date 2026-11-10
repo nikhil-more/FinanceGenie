@@ -3,11 +3,18 @@
 Recorded 9 November 2026. [plan.md](../plan.md) is the canonical financial contract
 and acceptance specification; this document records the scope being started.
 
+On 10 November 2026 the user reaffirmed that this app is for individual use.
+Prioritize a simple personal workflow for their own accounts and private data;
+team spaces, organizational roles, approval hierarchies and business administration
+are outside scope. Optional sync/web work remains separately authorized later scope.
+
 The user has started milestone A implementation and requested a maintained
 `progress_tracker.md` covering verification and tradeoffs at every step. The
 foundation, financial model, Room storage and manual-management screens are
 implemented; Step 4 automated/manual, Step 5 budgets and Step 6 analytics/baseline
-acceptance have passed. Startup measurement limits remain explicit Gate A work. The app
+acceptance have passed. Step 7 adds bounded CSV mapping/preview, explicit
+classification/matching, atomic import and replay-protected batch undo/restore.
+Startup measurement limits remain explicit Gate A work. The app
 starts without sign-in, payment credentials or sensitive
 permissions. Initial currency is INR, reporting zone Asia/Kolkata, minimum Android
 API 26. The user provides a physical phone for testing; the current reference is
@@ -16,7 +23,7 @@ an A063 running Android 15 / API 35. Device serials and personal data are not re
 The app offers Overview, Transactions, Budgets and Settings navigation, account/
 category management, manual transactions, calendar budgets, exact scoped totals,
 signed charts with text alternatives, recent activity, shared filters,
-light/dark themes and empty/error states. CSV imports remain Step 7.
+light/dark themes and empty/error states. CSV import/history is in Settings.
 It contains
 no invented financial values or nonfunctional add/import buttons. Debug and release
 application IDs differ to isolate their data.

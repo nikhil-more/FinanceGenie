@@ -282,3 +282,52 @@ References checked for this implementation:
   187.30/2.99/278.76ms and meet their budgets. Analytics and baseline collection
   complete Step 6; startup limitations, budget-save latency and other Gate A
   requirements remain recorded in the verification log and progress tracker.
+
+## 2026-11-10 — Step 7 personal CSV imports
+
+- **Individual scope:** The user reaffirmed personal use. Keep one person's own
+  cash/bank/card accounts and private ledger; shared workspaces, organizational
+  roles, approval hierarchies and business administration are outside scope.
+  Optional later milestones still need separate scope authorization.
+- **Input boundary:** Android's document picker and a bounded strict UTF-8 parser
+  support the generic format and explicit debit/credit-column/date mapping.
+  Quoted commas/newlines/quotes and BOMs are supported; ambiguous dates/signs and
+  unknown categories are never guessed. Keep at most 10 MiB/10,000 data records,
+  64 columns and 4,000 characters per field. No broad storage permission, retained
+  original file or permanent provider access is needed.
+- **Review:** Debit/credit establishes account movement, not economic type.
+  Explicitly confirm bulk expense classification only for valid unmatched debits
+  with known categories. Credits, transfers, refunds and possible matches need
+  row review. Plan against one ledger revision and validate the accepted group
+  again inside commit. Invalid/unresolved rows are excluded with visible reasons.
+- **Matching:** Account-scoped reference hashes are the strongest signal; otherwise
+  same-leg/date/amount suggests existing events even when descriptions differ.
+  This deliberately asks for extra review of equal-value movements so manual
+  entries and opposite transfer descriptions cannot silently duplicate spending.
+  Matching attaches provenance without rewriting the original event. One event
+  cannot absorb two rows in one file; legitimate identical new rows remain distinct.
+- **Replay:** Store versioned component hashes binding profile, account, mapping
+  and original bytes, plus logical row occurrences. Preserve the original
+  profile/file identity across remapping/account changes. Committing a subset
+  reserves the whole file; remaining rows require a reduced/corrected file and
+  overlap review. This conservative choice favors explicit review over silently
+  appending rows or importing byte-identical files into another account.
+- **Durability:** Reuse schema v1's batch/evidence/change-receipt tables; there is
+  no schema migration. Commit events, evidence, receipts, batch and ledger revision
+  atomically. Batch undo/restore checks every linked record's revision/status and
+  later links, and rejects the whole operation on conflict. Only new batch-owned
+  events are tombstoned; pre-existing matched financial records remain intact.
+  Generic transaction undo cannot bypass batch rules. Explicit restore retains
+  replay protection and supports repeated revision-checked undo/restore cycles.
+- **Draft lifetime:** Preview/review choices survive rotation only in ViewModel
+  memory. Cancel/success/process death discards them; financial drafts, file bytes
+  and provider URIs are not serialized to saved state. The user reopens a file
+  after process death; committed batch state remains durable.
+- **Measurement:** A separate non-debuggable/profileable app imports 10,000 rows
+  into 10,000 existing events in 5,253.70ms through exact verification, below the
+  15-second target. One observation excludes provider latency and human review;
+  it is not a P95 claim. Sampled PSS is not a continuous peak measurement.
+  See [the CSV guide](csv-import.md) and [baseline](csv-performance-baseline.json).
+- **Revisit:** Actual bank adapters, import-volume regressions and Step 8 portable
+  restore. Restoring to a new profile must re-scope hashed file/evidence identities
+  from stored components without retaining raw statements or bank references.

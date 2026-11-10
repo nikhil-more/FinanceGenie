@@ -63,7 +63,7 @@ android {
         }
     }
 
-    sourceSets.getByName("androidTest").assets.srcDir(rootProject.file("fixtures/ledger"))
+    sourceSets.getByName("androidTest").assets.srcDir(rootProject.file("fixtures"))
     if (testBuildType == "benchmark") sourceSets.getByName("androidTest").java.srcDir("src/benchmarkTest/java")
 }
 
@@ -103,5 +103,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.espresso)
+    androidTestImplementation(libs.androidx.uiautomator)
     "benchmarkImplementation"(libs.androidx.profileinstaller)
 }

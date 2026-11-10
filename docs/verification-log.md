@@ -541,3 +541,115 @@ are maintained in [progress_tracker.md](../progress_tracker.md).
   Startup confirmation/trace limitations and budget-save timing are explicit open
   Gate A checks. CSV is Step 7; recovery, full-app accessibility, actual OS backup
   behavior and Gate A remain outstanding.
+
+## Step 7 — Previewed, reversible CSV imports — 2026-11-10
+
+- **Implemented:** Settings → CSV import/history, Android's real document picker,
+  bounded strict UTF-8/quoted-field parsing and explicit account/column/date mapping.
+  Support the generic positive-INR amount/direction format and split debit/credit
+  columns. Preview counts/reasons/totals, confirm bulk unmatched debit expenses,
+  and individually review credits/refunds/transfers and possible matches. Commit
+  only the explicitly accepted subset. No transactions are written by preview/cancel.
+- **Personal scope:** The user reaffirmed individual use. One person's private
+  accounts/ledger remain the scope; no team, organizational-role or business
+  administration features are introduced.
+- **Replay/matching:** Profile/file identity survives mapping/account changes;
+  hashes/row occurrences preserve legitimate identical rows without raw statement
+  retention. References or same-leg/date/amount suggest existing events even when
+  descriptions differ. Matching is explicit and preserves original fields/source/
+  notes/revisions. Opposite transfer statements attach to the same financial event.
+  A subset reserves the whole file; later remaining rows need a reduced/corrected
+  file and overlap review. An undone file offers explicit batch restoration.
+- **Storage:** Reuse schema v1 without a migration. Batch/events/evidence/receipts/
+  revision commit atomically. Every receipt's revision/status and later links guard
+  all-or-nothing undo/restore; only batch-created events are tombstoned. Generic
+  undo cannot bypass import checks. Repeated undo/restore, later edits, edited
+  tombstones, linked refunds/evidence, stale previews/races and disk-full rollback
+  have explicit assertions. A failing after-insert SQLite trigger proves rollback
+  after a write has started rather than merely testing preflight rejection.
+- **JVM/build:** **79 JVM tests pass**, zero failures/errors/skips, including
+  thirteen CSV parser/mapping/classification tests. Byte/row/column/field caps,
+  invalid UTF-8, BOM, quoting/newlines, split columns, strict dates, ambiguous
+  categories and the independent SHA-256 `abc` vector are covered. Debug/release/
+  test builds pass; final full build **39s**, 128 tasks (25 executed, 103 up-to-date).
+  Subsequent test/lint builds pass in **26s** and **21s**; lint reports **No issues
+  found**. The final test-only fixture-path repair builds/lints in **21s**, 56 tasks
+  (8 executed, 48 up-to-date). Exported Room schema v1 has no diff.
+- **Storage phone result:** The final storage invocation passes **35 tests**
+  (1.964s), including eight CSV repository cases. Its separate writer/force-stop/
+  reader probe passes with a fresh reader process. This run then exposed one
+  existing UI fixture read still using the former flat asset path. Both fixture
+  consumers now use `ledger/november-baseline.json` under the namespaced test asset
+  root; the financial expectations and production code are unchanged.
+- **UI regression result:** After that test-only repair, `verify_storage_on_device.py
+  --ui-only` passes **12 entry/navigation/privacy/error/layout tests** (72.999s),
+  **five budget tests** (37.742s), **six analytics tests** (24.758s), plus the
+  expense/budget save/force-stop/fresh-reader stages (8.175s/3.109s). Final launch
+  reports **Status: ok**. Together with CSV, **31 UI tests** and four fresh-reader
+  verifications pass. The phone is authorized on the isolated ADB socket;
+  no ADB server was reset and no phone reconnection is needed for these final runs.
+- **CSV phone result:** The CSV driver passes **eight UI/picker tests** (43.367s):
+  100-row review/classification/rotation/commit/undo/replay/restore; split columns/
+  explicit dates; cancel/no writes; stream cancellation; stale confirmation;
+  manual matching/preserved original record; sanitized disk-full failure retaining
+  the preview; actual system document selection with exact fixture-hash equality;
+  and 200% font/dark preview/refund controls. No required test is skipped. Earlier
+  picker synchronization fixes reacquire stale DocumentsUI nodes and wait for the
+  requested Downloads root; off-screen mapping controls are reached by scrolling.
+- **Independent corpus:** 80 valid debits **₹785.50**, ten valid credits **₹200**,
+  ten invalid rows and two distinct identical debits. With two manual matches,
+  bulk accepts 78 and leaves twelve for review. Two attachments and explicit
+  income/transfer/refund classification yield **83 accepted = 81 new + 2 matched**,
+  seven still needing review and ten invalid. Exact net spending **₹765.50**,
+  income **₹20**, Bank position **−₹725.50**, Cash **−₹20**. The UI's empty ledger
+  imports 83 new events with the same totals. Expected amounts were independently
+  updated when the two manual-match fixtures became unique ₹11/₹12 movements;
+  conservative equal-movement matching was retained.
+- **Real interruption:** A test-only SQLite wrapper blocks after the first actual
+  transaction insert in a pending 10,000-row batch. The host then force-stops only
+  FinanceGenie Dev. A fresh process verifies precisely the previously committed
+  five rows/one batch/five evidence receipts/revision 5, with no partial second
+  batch, then undoes the baseline. A second stop/fresh reader verifies durable
+  undone replay protection and explicit restore. Final readers pass in
+  **0.099s/0.113s**. The wrapper, gate and test database are absent from normal apps.
+- **Layout/privacy:** Retrieved only the test-generated 200% dark CSV cache image
+  and visually checked wrapping/readable exact amounts. Tests scroll to the review/
+  refund controls. Native Material controls use existing themes and accessible
+  text; no restyling/dependency change is needed. This is not a new human CSV
+  TalkBack run or a claim of tablet/minimum-API coverage. Full-app accessibility
+  and broader device checks remain Gate A work. Preview/review choices survive
+  rotation in RAM only; cancel/success/process death discards them. No source file,
+  financial saved-state draft or permanent URI grant is retained.
+- **Performance:** The separate non-debuggable/profileable A063 app imports
+  10,000 new rows into 10,000 existing events and verifies all **20,000** events,
+  10,000 provenance records and exact spending/position deltas. **5,253.70ms** total
+  meets the unchanged **15,000ms** target: parse 47.68ms, preview/classification
+  1,646.44ms, atomic commit 3,034.53ms, verification 525.06ms. Benchmark build passes
+  in **29s**, 106 tasks. [The reviewed baseline](csv-performance-baseline.json)
+  includes app/driver/test APK hashes and sampled PSS **78,251 KiB**. One observation
+  is not a P95; prepared input bytes exclude provider/download and human review
+  time, and PSS after verification is not a continuously measured peak.
+- **Packaging/hygiene:** Normal debug/release APKs contain neither synthetic CSV/
+  ledger assets nor test/crash/benchmark setup classes. Their only requested
+  permission remains the AndroidX internal receiver permission; there is no
+  Internet/broad-storage/SMS/notification collection permission. Unsigned release
+  size is **7,260,914 bytes**. `.gitignore` excludes local CSV statements while
+  allowing the synthetic fixtures, plus local agent/tool directories. Repository
+  hygiene, wrapper checksum and whitespace checks pass. No user ledger/preferences
+  were cleared and no broad phone log, personal image or device serial is committed.
+  After retaining the reviewed benchmark report, the three synthetic benchmark
+  packages were uninstalled and FinanceGenie Dev reopened with its data retained.
+- **Reproduction/evidence:** [CSV behavior and commands](csv-import.md),
+  `/tmp/financegenie-step7-verified-build.log`,
+  `/tmp/financegenie-step7-final-tests-build.log`,
+  `/tmp/financegenie-step7-fixture-regression-build.log`,
+  `/tmp/financegenie-step7-final-regression-phone.log`,
+  `/tmp/financegenie-step7-final-ui-regression-phone.log`,
+  `/tmp/financegenie-step7-final-csv-run.log`,
+  `/tmp/financegenie-step7-final-csv/`,
+  `/tmp/financegenie-step7-final-performance-build.log`,
+  `/tmp/financegenie-step7-csv-performance/summary.json`, JVM/lint reports and the
+  checked-in synthetic fixtures/tests/drivers. Remote CI is separate evidence.
+- **Status:** Step 7 PASS. Next is Step 8 backup/restore/export/local deletion.
+  Step 6's startup confirmation/trace limits, budget-save latency, broader device/
+  full-app human accessibility, actual OS backup behavior and Gate A remain open.

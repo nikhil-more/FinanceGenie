@@ -228,7 +228,7 @@ class LedgerUiTest {
     @Test fun goldenSalaryPurchaseRefundTransfersCardPaymentAndAdjustment() {
         compose.waitTag("add_transaction")
         val fixtures = org.json.JSONObject(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().context.assets
-            .open("november-baseline.json").bufferedReader().use { it.readText() }).getJSONArray("transactions")
+            .open("ledger/november-baseline.json").bufferedReader().use { it.readText() }).getJSONArray("transactions")
         val names = listOf("Synthetic Salary", "Synthetic Groceries", "Synthetic Refund", "Synthetic Cash Withdrawal", "Synthetic Card Purchase", "Synthetic Card Payment")
         val generatedIds = mutableMapOf<String, UUID>()
         for (index in 0 until fixtures.length()) {

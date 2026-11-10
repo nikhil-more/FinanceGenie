@@ -10,6 +10,10 @@ text alternatives and recent matching activity. Its filters are shared with
 Transactions. The Budgets tab supports independent
 overall/category limits, month planning, explicit next-month copying and in-app
 warnings, always against the full calendar month.
+Settings includes CSV import with column/date mapping, an explicit review preview,
+duplicate suggestions and replay protection, plus batch history with safe undo/
+restore. See [the CSV guide](docs/csv-import.md) for the supported personal-statement
+format and synthetic examples.
 
 ## Open and build
 
@@ -48,6 +52,7 @@ not a complete Kotlin formatter or comprehensive secret scanner. Android lint
 provides the initial Android static analysis. JVM tests cover exact money,
 ledger validation, account/report/budget calculations and the shared synthetic
 fixture under `fixtures/ledger/`. These run without an Android runtime.
+CSV parser, mapping and classification tests use synthetic `fixtures/csv/` files.
 
 Navigation, entry, privacy and activity-recreation tests are in `src/androidTest/`. With a running
 Android emulator or connected test device, run:
@@ -76,6 +81,17 @@ Use `--budget-ui-only` for budget UI checks plus the expense/budget restart prob
 Use `--analytics-ui-only` for the golden/filter/edit and empty/single/1,000-row
 analytics checks. For the isolated 10,000-record physical-phone performance setup,
 see [the benchmark guide](docs/performance.md).
+
+For the CSV UI/system-picker and interrupted-commit recovery checks, run:
+
+```bash
+python3 scripts/verify_csv_on_device.py
+```
+
+This driver creates/removes only its unique synthetic Downloads file and test
+database. It verifies a real interrupted SQLite transaction in a fresh process,
+then durable undo/replay protection and explicit restore. See [CSV reproduction
+and the 10,000-row baseline](docs/csv-import.md#verification-and-reproduction).
 
 Manually check dark mode, rotation, back navigation, 200% font size and TalkBack.
 The user supplies a connected physical phone for device tests; the current
@@ -109,6 +125,8 @@ toolchain and target SDK together before public distribution; see
 The app starts with an empty ledger and Uncategorized, with no seeded financial
 records, network integration or sensitive permission request. Cloud sync,
 notification access and AI are not configured.
+It is for individual use, with one person's own accounts and private ledger.
+Team spaces, organizational roles and business administration are outside scope.
 OS cloud/device-transfer backup exclusions are explicit; actual device behavior
 must still be verified. The app has no application-level database encryption or
 portable backup yet. Optional app lock uses the Android device credential; screen
@@ -124,6 +142,7 @@ signing keys or service credentials. Use synthetic data for later tests.
 - [Local data model and write boundaries](docs/local-data.md)
 - [Calendar budgets and copy behavior](docs/budgets.md)
 - [Offline Overview, charts and filter scope](docs/analytics.md)
+- [CSV mapping, review, replay and batch recovery](docs/csv-import.md)
 - [Performance methodology and reproduction](docs/performance.md)
 - [Acceptance checklist](docs/e2e-acceptance.md)
 

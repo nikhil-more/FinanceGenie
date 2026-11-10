@@ -70,6 +70,34 @@ Step 6's analytics/baseline gate is PASS. Performance target outcomes are separa
 from completion of the baseline; see
 [the measurements](performance.md) and [verification](verification-log.md).
 Budget-save timing and human analytics-specific TalkBack review remain Gate A
-checks. Do not mark Gate A complete: imports, recovery, performance hardening,
+checks. Do not mark Gate A complete: recovery, performance hardening,
 full-app accessibility and actual OS backup behavior retain their later checks.
 Recovery is required before using real personal finances.
+
+Step 7 acceptance on the same phone:
+
+- [x] Real system picker, strict bounded UTF-8/quoted fields, explicit mappings/
+  dates, invalid-row reasons, exact counts and debit/credit totals.
+- [x] Preview/cancel writes nothing; rotation retains an in-memory review draft.
+- [x] Explicit bulk expense confirmation and individual income/refund/transfer
+  decisions; linked refund caps and unlinked confirmation remain enforced.
+- [x] Manual/CSV matching despite differing descriptions, both transfer legs,
+  reference/overlap/reordered files and distinct legitimate identical rows.
+- [x] Same-file replay across mappings/accounts is blocked; undone files offer
+  explicit restore; accepted-subset file reservation is explained.
+- [x] The 100-row corpus accepts 83 rows (81 new/two matches), with seven needing
+  review and ten invalid; exact ₹765.50 spending/₹20 income are verified.
+- [x] Atomic disk-failure rollback and a real process stop after an actual insert
+  leave the prior committed ledger intact; fresh readers verify undo/replay/restore.
+- [x] History preserves matched records, repeated undo/restore works, and edited
+  rows/tombstones/new evidence/linked refunds reject conflicting batch operations.
+- [x] 200% dark layout/refund controls, real picker content hash and all existing
+  entry/privacy/budget/analytics regressions pass. Normal apps contain no fixtures,
+  crash hooks or extra collection permission.
+- [x] A 10,000-row import into 10,000 existing events reaches exact verified state
+  in 5.25 seconds, below 15 seconds. This is one observation excluding provider/
+  human review time; sampled memory does not establish a continuous peak.
+
+Step 7 is PASS. Versioned full backup/restore, safe CSV report export and local
+deletion are Step 8. Human CSV-specific TalkBack review joins the full-app Gate A
+walkthrough; prior startup/trace, budget-save and OS backup checks remain open.

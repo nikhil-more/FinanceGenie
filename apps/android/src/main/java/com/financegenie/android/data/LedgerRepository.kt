@@ -9,6 +9,7 @@ import com.financegenie.android.domain.LedgerDates
 import com.financegenie.android.domain.LedgerSnapshot
 import com.financegenie.android.domain.LedgerTransaction
 import com.financegenie.android.domain.MonthlyBudget
+import com.financegenie.android.csv.CsvImportRequest
 import java.time.YearMonth
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
@@ -82,6 +83,7 @@ data class StoredLedger(
     val budgets: List<StoredRecord<MonthlyBudget>>,
     val observations: List<StoredRecord<BalanceObservation>>,
     val evidence: List<SourceEvidenceRecord>,
+    val importBatches: List<ImportBatchRecord> = emptyList(),
 ) {
     val snapshot: LedgerSnapshot
         get() = LedgerSnapshot(
@@ -105,6 +107,18 @@ class StaleRecordException : IllegalStateException("This record changed; reload 
 
 data class BudgetCopyResult(val createdCount: Int, val existingCount: Int, val archivedCount: Int)
 
+data class ImportBatchRecord(val id: UUID, val accountId: UUID, val fingerprint: String,
+    val acceptedCount: Int, val isUndone: Boolean, val createdAtMillis: Long) {
+    val fileIdentity: String get() = fingerprint.split(':')[3]
+    init {
+        require(Regex("csv1(?::[a-f0-9]{64}){4}").matches(fingerprint)) { "Unsupported CSV batch fingerprint" }
+        require(acceptedCount in 1..10_000)
+    }
+}
+
+class CsvReplayException(val batch: ImportBatchRecord) : IllegalStateException("This file was already imported")
+class CsvUndoConflict : IllegalStateException("Imported records changed or acquired new links")
+
 interface LedgerRepository {
     suspend fun read(): StoredLedger
     fun observe(): Flow<StoredLedger>
@@ -122,6 +136,9 @@ interface LedgerRepository {
     ): UUID
 
     suspend fun undoTransactionChange(groupId: UUID)
+    suspend fun commitCsv(request: CsvImportRequest): UUID
+    suspend fun undoCsv(batchId: UUID, expectedLedgerRevision: Long)
+    suspend fun restoreCsv(batchId: UUID, expectedLedgerRevision: Long)
 
     suspend fun transactions(
         range: DateRange,

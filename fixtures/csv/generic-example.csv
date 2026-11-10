@@ -1,0 +1,3 @@
+date,amount,direction,merchant,category,reference
+2026-11-02,249.50,DEBIT,Synthetic lunch,Food,SYN-LUNCH-1
+2026-11-03,100.00,CREDIT,Synthetic credit needing review,,SYN-CREDIT-1

@@ -27,6 +27,10 @@ internal interface LedgerDao {
     @Query("SELECT * FROM change_groups WHERE id = :id") suspend fun group(id: UUID): ChangeGroupEntity?
     @Query("SELECT * FROM change_items WHERE group_id = :id ORDER BY transaction_id") suspend fun items(id: UUID): List<ChangeItemEntity>
     @Query("SELECT COUNT(*) FROM change_groups") suspend fun groupCount(): Int
+    @Query("SELECT * FROM import_batches ORDER BY created_at_ms DESC, id") suspend fun batches(): List<ImportBatchEntity>
+    @Query("SELECT * FROM import_batches WHERE id = :id") suspend fun batch(id: UUID): ImportBatchEntity?
+    @Query("SELECT * FROM source_evidence WHERE import_batch_id = :id") suspend fun batchEvidence(id: UUID): List<SourceEvidenceEntity>
+    @Query("SELECT COUNT(*) FROM source_evidence WHERE change_group_id = :id AND import_batch_id IS NOT NULL") suspend fun importedGroupEvidenceCount(id: UUID): Int
 
     @Insert suspend fun insertAccount(value: AccountEntity)
     @Update suspend fun updateAccount(value: AccountEntity)
@@ -43,6 +47,12 @@ internal interface LedgerDao {
     @Insert suspend fun insertGroup(value: ChangeGroupEntity)
     @Insert suspend fun insertItems(values: List<ChangeItemEntity>)
     @Insert suspend fun insertEvidence(values: List<SourceEvidenceEntity>)
+    @Insert suspend fun insertBatch(value: ImportBatchEntity)
+    @Query("UPDATE import_batches SET is_undone = :undone WHERE id = :id") suspend fun setBatchUndone(id: UUID, undone: Boolean)
+    @Query("UPDATE change_groups SET is_undone = :undone WHERE id = :id") suspend fun setGroupUndone(id: UUID, undone: Boolean)
+    @Query("UPDATE change_items SET after_revision = :revision WHERE group_id = :groupId AND transaction_id = :transactionId")
+    suspend fun setItemRevision(groupId: UUID, transactionId: UUID, revision: Long)
+    @Query("UPDATE source_evidence SET is_active = :active WHERE import_batch_id = :id") suspend fun setBatchEvidenceActive(id: UUID, active: Boolean)
     @Query("UPDATE change_groups SET is_undone = 1 WHERE id = :id") suspend fun markUndone(id: UUID)
     @Query("UPDATE source_evidence SET is_active = 0 WHERE id IN (:ids)") suspend fun detachEvidence(ids: List<UUID>)
 

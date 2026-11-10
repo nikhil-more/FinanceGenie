@@ -33,6 +33,7 @@ def main() -> int:
     phases = parser.add_mutually_exclusive_group()
     phases.add_argument("--startup-only", action="store_true", help="Measure startup without repeating in-process operations")
     phases.add_argument("--operations-only", action="store_true", help="Measure operations against an already prepared 10,000-event fixture")
+    phases.add_argument("--csv-only", action="store_true", help="Measure one verified 10,000-row CSV import into the isolated 10,000-event fixture")
     args = parser.parse_args()
     apks = [ROOT / "apps/android/build/outputs/apk/benchmark/android-benchmark.apk",
             ROOT / "benchmarks/build/outputs/apk/benchmark/benchmarks-benchmark.apk",
@@ -70,6 +71,37 @@ def main() -> int:
     for apk in apks:
         if "Success" not in adb("Install " + apk.name, ["install", "-r", "-t", str(apk)]):
             raise RuntimeError("Benchmark APK installation failed")
+    if args.csv_only:
+        instrument("Prepare only the isolated synthetic benchmark fixture", DRIVER + "/" + RUNNER,
+                   ["-e", "class", DRIVER + ".CsvFixtureSetup"], "csv-fixture.log")
+        output = instrument("Measure 10,000-row CSV preview/classification/commit and verify exact totals", TARGET + ".test/" + RUNNER,
+                            ["-e", "class", "com.financegenie.android.CsvImportPerformanceTest"], "csv-import.log")
+        match = re.search(r"^INSTRUMENTATION_STATUS: financegenie_csv_performance=(.+)$", output, re.MULTILINE)
+        if not match:
+            raise RuntimeError("CSV performance result is missing")
+        measured = json.loads(match.group(1))
+        if (measured.get("existingRecords"), measured.get("importedRows"), measured.get("recordsAfter")) != (10_000, 10_000, 20_000):
+            raise RuntimeError("CSV benchmark must verify all imported rows and the final ledger size")
+        elapsed = float(measured["totalToVerifiedMs"])
+        if not math.isfinite(elapsed) or elapsed < 0:
+            raise RuntimeError("CSV benchmark duration must be finite and nonnegative")
+        if artifact_hashes != [hashlib.sha256(path.read_bytes()).hexdigest() for path in apks]:
+            raise RuntimeError("Benchmark APKs changed during measurement")
+        report = {
+            "deviceModel": adb("Read test model", ["shell", "getprop", "ro.product.model"]).strip(),
+            "apiLevel": int(adb("Read API level", ["shell", "getprop", "ro.build.version.sdk"]).strip()),
+            "buildType": "benchmark, non-debuggable, profileable",
+            "compilation": "installed state; warm filesystem cache",
+            "method": "One 10,000-row CSV import into 10,000 existing records; parse, preview, classification, atomic commit and exact verification; human review time excluded",
+            "appApkBytes": app_bytes, "appApkSha256": artifact_hashes[0],
+            "driverApkSha256": artifact_hashes[1], "testApkSha256": artifact_hashes[2],
+            "csvImport": measured, "targetsMet": {"csvImport10000AtMost15000ms": elapsed <= 15_000},
+        }
+        path = args.output / "summary.json"
+        path.write_text(json.dumps(report, indent=2) + "\n")
+        print(json.dumps({"csvImportToVerifiedMs": elapsed, "targetsMet": report["targetsMet"]}), flush=True)
+        print("Saved aggregate timing report: " + str(path), flush=True)
+        return 0
     startup = {}
     if not args.operations_only:
         output = instrument("Measure 20 cold launches through committed and confirmed Overview", DRIVER + "/" + RUNNER, [
