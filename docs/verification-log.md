@@ -798,7 +798,25 @@ are maintained in [progress_tracker.md](../progress_tracker.md).
   [action's v3 inputs](https://github.com/android-actions/setup-android/blob/v3/action.yml).
 - **Phone test harness:** Added waits for actual Compose roots/input state and
   reacquisition after a stale semantics node. Repeated lost-foreground attempts
-  were not passes. The user confirmed they were using Home/Back during those
-  attempts and then made the phone available untouched; a fresh run is pending.
+  were not passes. The user reported using the phone during earlier attempts,
+  then made it available untouched. The early exit recurred. A temporary
+  candidate-only finish trace identified Android's Back/`RequestFinishCallback`
+  path, without a crash or profile recreation. The trace was removed and the
+  clean candidate rebuilt; production source is unchanged. The user identified
+  their app blocker as the cause and requested all package IDs for whitelisting.
+  Those IDs are now in the acceptance guide. Await confirmation before more phone
+  UI automation. Completed benchmark packages were removed; the normal app and
+  phone settings are preserved.
+- **First emulator results:** All build tasks passed. API 26 storage passed, but
+  three UI checks failed because its ICU renders a non-breaking space after ₹.
+  New matchers allow only that currency spacing while preserving exact signs,
+  digits, grouping and decimals. API 34 storage passed, but the entire UI command
+  exceeded 180 seconds; the host now allows 600 seconds without changing assertion
+  waits or app performance targets. Corrected full matrix results remain pending.
+- **Next release matrix attempt:** Both API 26/34 candidates successfully entered
+  all six events and checked exact totals/budget remaining, then failed at a test
+  that used `performScrollTo` on an uncomposed lazy-list child. The test now scrolls
+  the transaction list to the tagged action before finding/clicking it. This is
+  a harness correction, without changing app behavior or expected money values.
 - **Status:** Gate A remains IN PROGRESS until the release journey/fresh reader,
   supported-version checks and full-app human accessibility/privacy review pass.

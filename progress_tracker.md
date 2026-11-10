@@ -367,8 +367,13 @@ architecture decisions live in [the decision record](docs/decisions.md).
   The user explicitly accepted approximately 315 ms on 10 November 2026. Preserve
   its original 300 ms miss, accept this baseline for personal use, and omit the
   additional report-caching optimization. Other timing targets stay unchanged.
-- **Coverage plan:** Repair the remote SDK setup failure and run API 26/34 device
-  checks in CI; this workspace has no emulator/KVM and only limited free disk.
+- **Coverage:** Remote SDK setup is repaired and all variants compile in CI.
+  The first API 26 run exposed ICU currency-spacing differences in UI assertions;
+  allow only the non-breaking space after ₹ while retaining exact signs/digits.
+  The API 34 suite exceeded its host command timeout; allow ten minutes for the
+  whole UI suite without changing per-check waits or financial timing targets.
+  Both corrected emulator runs remain pending. This workspace has no emulator/KVM
+  and only limited free disk.
   Physical A063/API 35 checks and the full-app human accessibility review remain
   independent evidence. No emulated performance result substitutes for the phone.
 - **Backup verification:** Actual Android framework extraction on API 35 produced
@@ -382,12 +387,27 @@ architecture decisions live in [the decision record](docs/decisions.md).
   calculation cache; the financial engine and schema are unchanged. Release
   smoke/restart, supported-version CI, full-app accessibility and final
   packaging/log checks remain in progress.
+- **Phone investigation:** The candidate exits through Android Back handling
+  before the first UI input. Earlier attempts overlapped the user's phone use;
+  the issue also recurred after readiness was reported. The user then identified
+  their app blocker as the cause and is whitelisting the variant/helper packages.
+  The package list is in the acceptance guide. A temporary candidate-only finish
+  trace was removed; production behavior is unchanged. Phone automation is paused
+  until whitelisting is confirmed. The three completed benchmark packages were
+  removed; normal Dev data remains intact.
+- **Release CI follow-up:** Both emulators reached the exact six-event golden
+  totals and ₹1,501 remaining budget, then exposed a test trying to find an
+  uncomposed off-screen transaction directly. Scroll the lazy list to its tag
+  before edit/delete. The complete journeys and remaining suites still need a
+  successful rerun. Cache trusted push builds to avoid repeated dependency work;
+  pull-request workflows remain read-only for the cache.
 
 ## Current actions and outstanding checks
 
-1. Run offline acceptance and close Gate A (Step 9). Steps 0–8 are complete;
-   recovery alone does not establish full-app release readiness.
-2. Before Gate A, address startup confirmation/trace limits and measure budget-save
-   latency. Do not claim a twenty-run AndroidX TTFD result from the incomplete capture.
-3. Device-backup behavior remains a later Gate A check; never commit a full phone
-   log or personal screenshot.
+1. Finish the release-like golden UI journey/fresh reader once app-blocker
+   whitelisting is confirmed, then complete the full-app human walkthrough.
+2. Finish the API 26/34 CI checks and record their actual outcomes. Steps 0–8 are
+   complete; Gate A remains IN PROGRESS until the required checks pass.
+3. Startup confirmation and backup extraction now have independent complete
+   evidence. Preserve the AndroidX 14/20 trace limitation and the accepted 315 ms
+   budget tradeoff; never relabel either original result as a target pass.

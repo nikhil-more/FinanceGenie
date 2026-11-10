@@ -14,6 +14,19 @@ package is `com.financegenie.android.acceptance`, labelled **FinanceGenie
 Acceptance**. The normal **FinanceGenie Dev** ledger and privacy preferences are
 preserved. Production signing and distribution remain unconfigured.
 
+App blockers must allow the packages used for the selected checks. If supported,
+the prefix `com.financegenie.*` covers all current variants and their test helpers.
+
+| Build | App package | Test companion |
+|---|---|---|
+| Release (unsigned, not installed by the drivers) | `com.financegenie.android` | — |
+| FinanceGenie Dev | `com.financegenie.android.debug` | `com.financegenie.android.debug.test` |
+| FinanceGenie Acceptance | `com.financegenie.android.acceptance` | `com.financegenie.android.acceptance.test` |
+| Recovery Check | `com.financegenie.android.recoverycheck` | `com.financegenie.android.recoverycheck.test` |
+| Performance target | `com.financegenie.android.benchmark` | `com.financegenie.android.benchmark.test` |
+| Backup positive control | `com.financegenie.android.backupcontrol` | `com.financegenie.android.backupcontrol.test` |
+| Startup benchmark driver | `com.financegenie.benchmarks` | Self-instrumenting package |
+
 ```bash
 ./gradlew -PfinancegenieTestBuildType=acceptance :apps:android:assembleAcceptance :apps:android:assembleAcceptanceAndroidTest
 ./gradlew -PfinancegenieTestBuildType=backupControl :apps:android:assembleBackupControl :apps:android:assembleBackupControlAndroidTest

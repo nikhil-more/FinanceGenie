@@ -77,13 +77,18 @@ class ReleaseAcceptanceTest {
         compose.onNodeWithTag("budget_list").performScrollToNode(hasTestTag("budget_remaining_overall"))
         compose.onNodeWithTag("budget_remaining_overall").assertMoneyEquals("₹1,501.00")
         compose.onNodeWithTag("tab_transactions").performClick()
-        compose.onNodeWithTag("edit_$purchase").performScrollTo().performClick()
+        fun transactionAction(tag: String) {
+            compose.waitTag("transaction_list")
+            compose.onNodeWithTag("transaction_list").performScrollToNode(hasTestTag(tag))
+            compose.onNodeWithTag(tag).performScrollTo().performClick()
+        }
+        transactionAction("edit_$purchase")
         compose.field("field_amount", "2500.25"); compose.saveForm()
         assertEquals(324_900L, report().netSpendingMinor)
-        compose.onNodeWithTag("edit_$purchase").performScrollTo().performClick()
+        transactionAction("edit_$purchase")
         compose.field("field_amount", "2750.25"); compose.saveForm()
         assertEquals(349_900L, report().netSpendingMinor)
-        compose.onNodeWithTag("delete_$purchase").performScrollTo().performClick()
+        transactionAction("delete_$purchase")
         compose.onNodeWithTag("confirm_delete").performClick()
         compose.waitUntil(15_000) { runBlocking { container.repository.read().transactions.count { it.transaction.isDeleted } == 2 } }
         compose.onNodeWithText("Undo").performClick()
