@@ -884,5 +884,20 @@ are maintained in [progress_tracker.md](../progress_tracker.md).
   it is not a pass (`/tmp/financegenie-step9-preserved-acceptance.log`). Phone
   automation is paused for a temporary blocker pause. The next retry will retain
   this still-empty installation and data, avoiding another reset/update.
+- **Search correction verified:** [Run 42802523770](https://github.com/nikhil-more/FinanceGenie/actions/runs/42802523770)
+  passes the entire API 34 gate: release smoke/fresh reader/framework extraction,
+  42 storage tests, 36 UI tests, CSV interrupted-write readers and complete
+  uninstall/reinstall/three-boundary recovery. API 26 passes release/framework,
+  35 storage and all 24 core/budget/analytics UI tests, including the frozen-report
+  search regression. Its CSV count assertion then loses its lazy cell between
+  the successful exact match and a redundant second lookup; Compose's failure
+  tree printer reports a thread-access error. The helper now makes one exact
+  synchronized lookup, retaining every expected count. The native recovery Save
+  picker also stays open; scope Save to the picker package's actual Button and
+  retain filename/closure/export assertions. Optional failure screenshots require
+  host CI plus a verified emulator and test-side emulator hardware; normal/physical
+  runs neither request nor read them. Three mocked guards pass and failed suites
+  still fail. Local instrumentation compilation and hygiene pass; the complete
+  next matrix results remain required.
 - **Status:** Gate A remains IN PROGRESS until the release journey/fresh reader,
   supported-version checks and full-app human accessibility/privacy review pass.

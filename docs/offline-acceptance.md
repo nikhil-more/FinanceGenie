@@ -118,6 +118,9 @@ API 26. Compose 1.7 cannot capture dialog images below API 28, so supplemental
 dialog PNGs are explicitly marked unavailable there; the test continues through
 save/cancel assertions. Non-dialog images and API 28+ dialog captures still run.
 An unavailable image is not reported as a visual review or a skipped test case.
+Native save-picker failure screenshots are likewise confined to disposable CI:
+the host requires `CI=true` and `ro.kernel.qemu=1`, and the test also requires
+emulator hardware. The phone driver never requests or reads these screenshots.
 
 Before closing Gate A, use TalkBack in the synthetic candidate to review Overview
 chart text, a transaction form, budget limits/remaining/status, CSV mapping and

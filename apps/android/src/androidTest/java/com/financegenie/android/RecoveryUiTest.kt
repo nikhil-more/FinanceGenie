@@ -130,11 +130,24 @@ class RecoveryPickerUiTest {
             assertTrue(device.wait(Until.hasObject(By.clazz("android.widget.EditText")), 10_000))
             downloads()
             val filename = "$baseName.$extension"
-            device.wait(Until.findObject(By.clazz("android.widget.EditText")), 5_000).text = filename
+            val filenameField = device.wait(Until.findObject(By.clazz("android.widget.EditText")), 5_000)
+            val pickerPackage = filenameField.applicationPackage
+            filenameField.text = filename
             assertTrue("The synthetic filename was not accepted", device.wait(Until.hasObject(By.clazz("android.widget.EditText").text(filename)), 5_000))
-            val save = By.text(java.util.regex.Pattern.compile("save", java.util.regex.Pattern.CASE_INSENSITIVE)).enabled(true)
+            val save = By.pkg(pickerPackage).clazz("android.widget.Button")
+                .text(java.util.regex.Pattern.compile("save", java.util.regex.Pattern.CASE_INSENSITIVE)).enabled(true)
             click(save)
-            assertTrue("The save picker did not close", device.wait(Until.gone(By.clazz("android.widget.EditText").text(filename)), 15_000))
+            if (!device.wait(Until.gone(By.clazz("android.widget.EditText").text(filename)), 15_000)) {
+                val button = device.findObject(save)
+                val details = "picker=$pickerPackage; save=${button?.resourceName}/${button?.className}/${button?.visibleBounds}"
+                // Native picker contents are captured only in disposable CI emulators,
+                // never on the user's phone or in a normal driver invocation.
+                if (InstrumentationRegistry.getArguments().getString("ciPickerDiagnostics") == "true" &&
+                    android.os.Build.HARDWARE in setOf("ranchu", "goldfish")) {
+                    device.takeScreenshot(File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "step9-picker-save.png"))
+                }
+                fail("The save picker did not close: $details")
+            }
             try {
                 compose.waitUntil(15_000) { compose.recoveryModel().recovery!!.state.value.message == R.string.recovery_exported }
             } catch (error: androidx.compose.ui.test.ComposeTimeoutException) {

@@ -376,12 +376,13 @@ architecture decisions live in [the decision record](docs/decisions.md).
   a separately labelled copied-metadata check verifies declared legacy XML.
   These do not claim an unperformed physical OEM migration or cloud restore.
 - **Supported Android coverage:** SDK setup is fixed; all variants build in CI.
-  Full release/recovery/delete/fresh-reader journeys have passed on API 26/34.
-  Run [42799414119](https://github.com/nikhil-more/FinanceGenie/actions/runs/42799414119)
-  passes CSV/picker/interrupted-import recovery on both versions. API 34 also
-  passes the complete recovery driver. Both jobs remain red because search edits
-  revert, API 34 hits an unfocused-root keyboard action, and API 26's recovery
-  save picker times out. The next run must verify the corrections below.
+  Run [42802523770](https://github.com/nikhil-more/FinanceGenie/actions/runs/42802523770)
+  passes the complete API 34 gate: release/framework, 42 storage, 36 UI and all
+  fresh-process/recovery/crash checks. API 26 passes release/framework, 35 storage
+  and 24 core/budget/analytics UI tests, including the search regression. Its CSV
+  count assertion loses a lazy cell between reads, and the native save picker
+  stays open. Exact synchronized count lookup and picker-scoped Save selection
+  are prepared for the next run; both versions must remain passing.
 - **Search correction:** The old text field read its value from background report
   results. A synchronous Compose input value now updates with the bounded filter
   selection; reports still calculate off the main thread. A focused regression
@@ -392,7 +393,11 @@ architecture decisions live in [the decision record](docs/decisions.md).
   covering row buttons. Match only API 26's currency-space variation, retaining
   exact money. Unsupported pre-28 dialog PNGs are explicitly unavailable while
   every large-font interaction still runs. Avoid Espresso's unfocused-root
-  keyboard action; verify filename, enabled Save and picker closure. CI runs all
+  keyboard action; verify filename, picker-scoped enabled Save and picker closure.
+  Failed native-picker images require both CI/emulator host guards and emulator
+  hardware in the test; physical-phone runs never request or read these images.
+  Three host-only mock checks verify this boundary and retain failing results.
+  CI runs all
   independent drivers sequentially and fails if any fails; it never hides a failure.
 - **Phone status:** The user identified their app blocker and whitelisted all
   variants/helpers. Reinstallation may discard that rule. The driver now checks

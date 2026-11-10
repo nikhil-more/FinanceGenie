@@ -68,7 +68,19 @@ def main() -> int:
             instrument(DEV, "Recovery storage safety", "com.financegenie.android.recovery.RecoveryRepositoryTest", [], "storage.log")
         if not args.storage_only and not args.drill_only:
             classes = ",".join("com.financegenie.android." + name for name in ("RecoveryUiTest", "RecoveryPickerUiTest", "RecoveryFontUiTest"))
-            instrument(DEV, "Recovery UI and real save/open pickers", classes, ["-e", "recoveryPickerBaseName", base], "ui.log")
+            ci_diagnostics = os.environ.get("CI") == "true" and adb("Check disposable emulator diagnostics", ["shell", "getprop", "ro.kernel.qemu"]).strip() == "1"
+            extra = ["-e", "recoveryPickerBaseName", base]
+            if ci_diagnostics:
+                extra += ["-e", "ciPickerDiagnostics", "true"]
+            try:
+                instrument(DEV, "Recovery UI and real save/open pickers", classes, extra, "ui.log")
+            finally:
+                if ci_diagnostics:
+                    image = subprocess.run(["adb", "-s", serial, "exec-out", "run-as", DEV, "cat", "cache/step9-picker-save.png"],
+                                           capture_output=True, timeout=30)
+                    if image.returncode == 0 and image.stdout.startswith(b"\x89PNG\r\n\x1a\n"):
+                        (args.output / "step9-picker-save.png").write_bytes(image.stdout)
+                    adb("Remove only the CI picker diagnostic", ["shell", "run-as", DEV, "rm", "-f", "cache/step9-picker-save.png"])
             raw = adb("Read only the picker-created synthetic JSON", ["exec-out", "cat", f"/sdcard/Download/{base}.json"], binary=True)
             parsed = json.loads(raw)
             assert parsed["counts"]["transactions"] == "1000"

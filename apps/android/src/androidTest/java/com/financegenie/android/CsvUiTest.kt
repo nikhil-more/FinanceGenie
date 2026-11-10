@@ -50,8 +50,9 @@ private fun AppComposeRule.loadCsv(text: String) {
 private fun AppComposeRule.csvCount(tag: String, expected: String) {
     waitUntil(15_000) { csvModel().csv.state.value.plan != null && !csvModel().csv.state.value.busy }
     csvNode(tag)
-    waitUntil(15_000) { onAllNodes(hasTestTag(tag) and hasText(expected)).fetchSemanticsNodes().isNotEmpty() }
-    onNodeWithTag(tag).assertTextEquals(expected)
+    // Assert the exact text in the synchronized lookup. A second lookup can
+    // lose the lazy cell during dialog/IME relayout on the older emulator.
+    waitUntil(15_000) { onAllNodes(hasTestTag(tag) and hasTextExactly(expected)).fetchSemanticsNodes().size == 1 }
 }
 private fun AppComposeRule.bulkCsv() {
     onNodeWithTag("csv_screen").performScrollToNode(hasTestTag("csv_bulk_debits"))
