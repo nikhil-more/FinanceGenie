@@ -1,11 +1,9 @@
 package com.financegenie.android
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.util.AtomicFile
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -174,9 +172,7 @@ class RecoveryFontUiTest {
         compose.openRecovery()
         compose.onNodeWithTag("recovery_backup").performScrollTo().performClick()
         compose.onNodeWithTag("recovery_confirm").assertIsDisplayed()
-        File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "step8-font200-dark-recovery.png").outputStream().use {
-            assertTrue(compose.onNode(isDialog()).captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it))
-        }
+        compose.onNode(isDialog()).saveSyntheticCapture("step8-font200-dark-recovery.png")
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithTag("recovery_delete").performScrollTo().assertIsDisplayed()
     }

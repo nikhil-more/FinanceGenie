@@ -1,15 +1,12 @@
 package com.financegenie.android
 
-import android.graphics.Bitmap
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -18,13 +15,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.test.platform.app.InstrumentationRegistry
 import com.financegenie.android.domain.TransactionKind
 import com.financegenie.android.privacy.PrivacyViewModel
 import com.financegenie.android.ui.FinanceGenieApp
 import com.financegenie.android.ui.LedgerViewModel
 import com.financegenie.android.ui.theme.FinanceGenieTheme
-import java.io.File
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -90,8 +85,6 @@ class LayoutUiTest {
     }
 
     private fun capture(name: String, tag: String) {
-        val image = compose.onNodeWithTag(tag).captureToImage().asAndroidBitmap()
-        val file = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, name)
-        file.outputStream().use { check(image.compress(Bitmap.CompressFormat.PNG, 100, it)) }
+        compose.onNodeWithTag(tag).saveSyntheticCapture(name)
     }
 }

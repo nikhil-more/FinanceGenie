@@ -51,6 +51,14 @@ internal suspend fun seedUiAccounts(repository: LedgerRepository) {
 }
 
 internal typealias AppComposeRule = AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity>
+internal fun AppComposeRule.waitForLedgerUi(predicate: (com.financegenie.android.data.StoredLedger) -> Boolean) = waitUntil(15_000) {
+    var ready = false
+    runOnUiThread {
+        val model = androidx.lifecycle.ViewModelProvider(activity)[LedgerViewModel::class.java]
+        ready = !model.busy.value && model.state.value.ledger?.let(predicate) == true
+    }
+    ready
+}
 internal fun ComposeContentTestRule.waitTag(tag: String) = waitUntil(15_000) {
     runCatching { onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false)
 }
@@ -133,14 +141,17 @@ class ManagementUiTest {
         compose.saveForm()
         val account = runBlocking { data.repository.read().accounts.single() }
         assertEquals(-10_025L, account.value.openingBalanceMinor)
+        compose.waitForLedgerUi { it.accounts.contains(account) }
         compose.onNodeWithText("Amount owed").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("balance_${account.value.id}").assertMoneyEquals("₹100.25")
         compose.onNodeWithTag("observe_${account.value.id}").performScrollTo().performClick()
         compose.field("field_amount", "110.25")
         compose.saveForm()
         assertEquals(-11_025L, runBlocking { data.repository.read().observations.single().value.reportedBalanceMinor })
+        compose.waitForLedgerUi { it.observations.any { record -> record.value.reportedBalanceMinor == -11_025L } }
         compose.onNodeWithTag("archive_account_${account.value.id}").performScrollTo().performClick()
         compose.waitUntil(10_000) { runBlocking { data.repository.read().accounts.single().value.isArchived } }
+        compose.waitForLedgerUi { it.accounts.any { record -> record.value.id == account.value.id && record.value.isArchived } }
         compose.onNodeWithTag("edit_account_${account.value.id}").performScrollTo().performClick()
         compose.field("field_name", "Renamed Card")
         compose.saveForm()
@@ -153,6 +164,7 @@ class ManagementUiTest {
         val category = runBlocking { data.repository.read().categories.first { it.value.name == "Food" } }
         compose.onNodeWithTag("archive_category_${category.value.id}").performScrollTo().performClick()
         compose.waitUntil(10_000) { runBlocking { data.repository.read().categories.first { it.value.id == category.value.id }.value.isArchived } }
+        compose.waitForLedgerUi { it.categories.any { record -> record.value.id == category.value.id && record.value.isArchived } }
         compose.onNodeWithTag("edit_category_${category.value.id}").performScrollTo().performClick()
         compose.field("field_name", "Meals")
         compose.saveForm()

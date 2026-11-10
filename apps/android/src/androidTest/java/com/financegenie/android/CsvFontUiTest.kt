@@ -1,9 +1,7 @@
 package com.financegenie.android
 
-import android.graphics.Bitmap
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -17,7 +15,6 @@ import com.financegenie.android.privacy.PrivacyViewModel
 import com.financegenie.android.ui.FinanceGenieApp
 import com.financegenie.android.ui.LedgerViewModel
 import com.financegenie.android.ui.theme.FinanceGenieTheme
-import java.io.File
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -64,10 +61,7 @@ class CsvFontUiTest {
         compose.waitUntil(15_000) { ledger.csv.state.value.plan != null }
         compose.onNodeWithTag("csv_screen").performScrollToNode(hasTestTag("csv_count_review"))
         compose.onNodeWithTag("csv_count_review").assertTextEquals("Needs review: 2")
-        val image = compose.onNodeWithTag("csv_screen").captureToImage().asAndroidBitmap()
-        File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "step7-font200-dark-csv.png").outputStream().use {
-            check(image.compress(Bitmap.CompressFormat.PNG, 100, it))
-        }
+        compose.onNodeWithTag("csv_screen").saveSyntheticCapture("step7-font200-dark-csv.png")
         compose.onNodeWithTag("csv_screen").performScrollToNode(hasTestTag("csv_review_3"))
         compose.onNodeWithTag("csv_review_3").performClick()
         compose.choose("csv_kind", "REFUND")

@@ -23,6 +23,12 @@ import org.junit.Test
 private const val csvHeader = "date,amount,direction,merchant,category,reference\n"
 private val csvSimple = csvHeader + "2026-11-02,1.25,DEBIT,Synthetic CSV lunch,Food,SYN-ONE\n"
 private fun AppComposeRule.csvModel() = ViewModelProvider(activity)[LedgerViewModel::class.java]
+private fun AppComposeRule.csvIdle() = waitUntil(15_000) { !csvModel().csv.state.value.busy }
+private fun AppComposeRule.csvNode(tag: String, waitIdle: Boolean = true): SemanticsNodeInteraction {
+    if (waitIdle) csvIdle()
+    onNodeWithTag("csv_screen").performScrollToNode(hasTestTag(tag))
+    return onNodeWithTag(tag).performScrollTo()
+}
 private fun AppComposeRule.openCsv() {
     if (onAllNodes(hasTestTag("csv_screen")).fetchSemanticsNodes().isNotEmpty()) return
     waitTag("tab_settings")
@@ -34,13 +40,16 @@ private fun AppComposeRule.openCsv() {
 private fun AppComposeRule.loadCsv(text: String) {
     val model = csvModel()
     runOnUiThread { model.csv.read { text.byteInputStream() } }
-    waitTag("csv_preview")
+    waitUntil(15_000) { model.csv.state.value.document != null && !model.csv.state.value.busy }
+    csvNode("csv_account")
     choose("csv_account", uiBank.toString())
-    onNodeWithTag("csv_preview").performScrollTo().performClick()
-    waitTag("csv_count_parsed")
+    csvNode("csv_preview").performClick()
+    waitUntil(15_000) { model.csv.state.value.plan != null && !model.csv.state.value.busy }
+    csvNode("csv_count_parsed")
 }
 private fun AppComposeRule.csvCount(tag: String, expected: String) {
-    onNodeWithTag("csv_screen").performScrollToNode(hasTestTag(tag))
+    waitUntil(15_000) { csvModel().csv.state.value.plan != null && !csvModel().csv.state.value.busy }
+    csvNode(tag)
     waitUntil(15_000) { onAllNodes(hasTestTag(tag) and hasText(expected)).fetchSemanticsNodes().isNotEmpty() }
     onNodeWithTag(tag).assertTextEquals(expected)
 }
@@ -57,12 +66,14 @@ private fun AppComposeRule.commitCsv() {
     onNodeWithTag("csv_screen").performScrollToNode(hasTestTag("csv_commit"))
     onNodeWithTag("csv_commit").assertIsEnabled().performClick()
     onNodeWithTag("csv_confirm_action").performClick()
+    csvIdle()
 }
 private fun AppComposeRule.batchAction(id: UUID, restore: Boolean = false) {
     val tag = "csv_${if (restore) "restore" else "undo"}_$id"
     onNodeWithTag("csv_screen").performScrollToNode(hasTestTag(tag))
     onNodeWithTag(tag).performClick()
     onNodeWithTag("csv_confirm_action").performClick()
+    csvIdle()
 }
 
 class CsvUiTest {
@@ -82,7 +93,7 @@ class CsvUiTest {
             } }
         }
         assertTrue(entered.await(10, java.util.concurrent.TimeUnit.SECONDS))
-        compose.onNodeWithTag("csv_cancel").performScrollTo().performClick()
+        compose.csvNode("csv_cancel", waitIdle = false).performClick()
         compose.waitUntil(10_000) { closed.get() && !model.csv.state.value.busy }
         assertEquals(before, runBlocking { data.repository.read() })
     }
@@ -129,9 +140,9 @@ class CsvUiTest {
         compose.waitUntil(15_000) { runBlocking { data.repository.read().importBatches.single().isUndone } }
         assertTrue(runBlocking { data.repository.read().transactions.all { it.transaction.isDeleted } })
         compose.loadCsv(text)
-        compose.onNodeWithTag("csv_message").performScrollTo().assertTextEquals(compose.activity.getString(R.string.csv_undone_replay))
-        compose.onNodeWithTag("csv_commit").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithTag("csv_cancel").performScrollTo().performClick()
+        compose.csvNode("csv_message").assertTextEquals(compose.activity.getString(R.string.csv_undone_replay))
+        compose.csvNode("csv_commit").assertIsNotEnabled()
+        compose.csvNode("csv_cancel").performClick()
         compose.batchAction(id, restore = true)
         compose.waitUntil(15_000) { runBlocking { !data.repository.read().importBatches.single().isUndone } }
         assertEquals(83, runBlocking { data.repository.read().transactions.count { !it.transaction.isDeleted } })
@@ -143,17 +154,18 @@ class CsvUiTest {
         compose.loadCsv(csvSimple)
         compose.bulkCsv()
         compose.csvCount("csv_count_accepted", "Accepted: 1")
-        compose.onNodeWithTag("csv_cancel").performScrollTo().performClick()
+        compose.csvNode("csv_cancel").performClick()
         compose.waitNoTag("csv_preview")
         assertEquals(before, runBlocking { data.repository.read() })
         compose.loadCsv(csvSimple)
         compose.bulkCsv()
         compose.csvCount("csv_count_accepted", "Accepted: 1")
-        compose.onNodeWithTag("csv_commit").performScrollTo().performClick()
+        compose.csvNode("csv_commit").performClick()
         val category = runBlocking { data.repository.read().categories.single { it.value.id == "food" } }
         runBlocking { data.repository.saveCategory(category.value.copy(name = "Updated Food"), category.metadata.revision) }
         compose.onNodeWithTag("csv_confirm_action").performClick()
-        compose.waitUntil(15_000) { compose.onAllNodes(hasTestTag("csv_message") and hasText(compose.activity.getString(R.string.csv_stale))).fetchSemanticsNodes().isNotEmpty() }
+        compose.csvIdle()
+        compose.csvNode("csv_message").assertTextEquals(compose.activity.getString(R.string.csv_stale))
         assertTrue(runBlocking { data.repository.read().transactions.isEmpty() })
         assertTrue(runBlocking { data.repository.read().importBatches.isEmpty() })
     }
@@ -217,9 +229,9 @@ class CsvFailureUiTest {
         compose.bulkCsv()
         compose.csvCount("csv_count_accepted", "Accepted: 1")
         compose.commitCsv()
-        compose.waitUntil(15_000) { compose.onAllNodes(hasTestTag("csv_message") and hasText(compose.activity.getString(R.string.csv_selection_error))).fetchSemanticsNodes().isNotEmpty() }
+        compose.csvNode("csv_message").assertTextEquals(compose.activity.getString(R.string.csv_selection_error))
         assertTrue(runBlocking { data.repository.read().transactions.isEmpty() })
-        compose.onNodeWithTag("csv_commit").performScrollTo().assertIsEnabled()
+        compose.csvNode("csv_commit").assertIsEnabled()
     }
 }
 
@@ -258,7 +270,7 @@ class CsvPickerUiTest {
         compose.onNodeWithTag("csv_preview").performScrollTo().performClick()
         compose.csvCount("csv_count_parsed", "CSV rows: 100")
         compose.csvCount("csv_count_invalid", "Invalid: 10")
-        compose.onNodeWithTag("csv_cancel").performScrollTo().performClick()
+        compose.csvNode("csv_cancel").performClick()
         assertTrue(runBlocking { data.repository.read().transactions.isEmpty() })
     }
 }

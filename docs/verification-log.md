@@ -845,5 +845,20 @@ are maintained in [progress_tracker.md](../progress_tracker.md).
   in [the acceptance guide](offline-acceptance.md). No production backup policy
   or financial calculation has been changed. Corrected legacy/runtime results
   and the remaining regressions still need successful runs.
+- **Legacy correction verified:** API 26 passes actual service eligibility
+  (candidate false, positive control true), declared-XML extraction and its
+  canary control. The original forced-agent diagnostic produced 373,396 bytes
+  after bypassing eligibility and omitting the XML resource; it was not a real
+  system backup of an eligible app. Installed backup policy is unchanged.
+- **Further regression results:** API 34 passes 35 storage, 12 entry/privacy/layout,
+  five budget and six analytics UI tests plus two fresh-process checks. CSV
+  exposed off-screen message/cancel targets and preview work that had not finished
+  before scrolling to counts. Tests now wait for actual controller completion and
+  scroll the containing list, retaining all counts/totals/error/cancellation checks.
+  API 26 management tests now wait for committed data to reach an idle UI before
+  editing, rather than clicking while the preceding write is still busy. The
+  known Compose pre-28 dialog-image exception marks only supplemental captures
+  unavailable; large-font save/cancel/value assertions still execute. These last
+  corrections compile locally; their complete matrix rerun is pending.
 - **Status:** Gate A remains IN PROGRESS until the release journey/fresh reader,
   supported-version checks and full-app human accessibility/privacy review pass.

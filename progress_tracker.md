@@ -418,6 +418,16 @@ architecture decisions live in [the decision record](docs/decisions.md).
   the account's owed label into view on shorter screens and retain exact search
   assertions with better synthetic diagnostics. Production behavior remains
   unchanged; these corrected checks still require successful reruns.
+- **Latest supported-API results:** API 26's actual BackupManager query now
+  rejects the candidate and accepts its control; the separate declared-XML
+  extraction passes. API 34 passes all 35 storage, 23 core/budget/analytics UI
+  tests and two fresh-process checks, plus release/recovery/framework checks.
+  Remaining failures are asynchronous/lazy-list assumptions in CSV tests and
+  API 26 management synchronization/supplemental dialog images. Wait for actual
+  controller/UI completion and scroll to targets without changing expected
+  financial values. Mark only unsupported pre-28 dialog PNGs unavailable; keep
+  every large-font interaction assertion. Full CI and phone/manual checks remain
+  open until the corrected regressions pass.
 
 ## Current actions and outstanding checks
 

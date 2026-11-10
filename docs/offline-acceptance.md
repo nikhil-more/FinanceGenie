@@ -109,6 +109,12 @@ accessibility. SDK setup requests `platform-tools` explicitly because the
 [action's v3 default](https://github.com/android-actions/setup-android/blob/v3/action.yml)
 includes the removed legacy `tools` package.
 
+Large-font tests keep all navigation, value and form-interaction assertions on
+API 26. Compose 1.7 cannot capture dialog images below API 28, so supplemental
+dialog PNGs are explicitly marked unavailable there; the test continues through
+save/cancel assertions. Non-dialog images and API 28+ dialog captures still run.
+An unavailable image is not reported as a visual review or a skipped test case.
+
 Before closing Gate A, use TalkBack in the synthetic candidate to review Overview
 chart text, a transaction form, budget limits/remaining/status, CSV mapping and
 preview, and the backup/deletion disclosures. Cancel destructive actions during
