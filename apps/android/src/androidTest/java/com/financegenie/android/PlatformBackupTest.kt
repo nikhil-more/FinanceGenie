@@ -2,6 +2,8 @@ package com.financegenie.android
 
 import android.app.backup.*
 import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.os.*
 import androidx.test.platform.app.InstrumentationRegistry
@@ -23,6 +25,28 @@ class PlatformBackupTest {
         assumeTrue("Use the isolated acceptance driver", context.packageName.endsWith(".acceptance") || context.packageName.endsWith(".backupcontrol"))
         val positive = context.packageName.endsWith(".backupcontrol")
         assertEquals(positive, context.applicationInfo.flags and ApplicationInfo.FLAG_ALLOW_BACKUP != 0)
+        val systemEligible = if (Build.VERSION.SDK_INT == 26) {
+            // Android 8 otherwise leaves a newly installed positive control stopped.
+            val activity = if (positive) instrumentation.startActivitySync(
+                Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) else null
+            try {
+                legacySystemEligibility(context).also { assertEquals("Real BackupManager eligibility", positive, it) }
+            } finally { activity?.let { instrumentation.runOnMainSync { it.finish() } } }
+        } else null
+        var suppliedLegacyRules = false
+        val extractionContext = if (!positive && Build.VERSION.SDK_INT < 31) {
+            val field = ApplicationInfo::class.java.getField("fullBackupContent")
+            if (field.getInt(context.applicationInfo) == 0) {
+                // Legacy PackageParser ignores fullBackupContent when allowBackup=false.
+                // The real service rejects this app (checked above on API 26). To also
+                // exercise its declared XML, supply the omitted resource on a COPY for
+                // this forced-agent test only; never mutate installed metadata/flags.
+                val copy = ApplicationInfo(context.applicationInfo)
+                field.setInt(copy, R.xml.backup_rules)
+                suppliedLegacyRules = true
+                object : ContextWrapper(context) { override fun getApplicationInfo() = copy }
+            } else context
+        } else context
         val ce = context
         val de = context.createDeviceProtectedStorageContext()
         fun seed(scope: Context, name: String) {
@@ -38,7 +62,7 @@ class PlatformBackupTest {
         try {
             for (destination in if (Build.VERSION.SDK_INT >= 31) listOf(0, 1) else listOf(0)) {
                 val agent = object : BackupAgent() {
-                    init { attachBaseContext(context) }
+                    init { attachBaseContext(extractionContext) }
                     override fun onBackup(oldState: ParcelFileDescriptor?, data: BackupDataOutput?, newState: ParcelFileDescriptor?) = Unit
                     override fun onRestore(data: BackupDataInput?, appVersionCode: Int, newState: ParcelFileDescriptor?) = Unit
                 }
@@ -74,7 +98,9 @@ class PlatformBackupTest {
                     } }
                 } else assertEquals("Configured rules must extract no app data", 0, bytes.size)
                 result.put(JSONObject().put("destination", if (destination == 1) "device-transfer" else "cloud")
-                    .put("bytes", bytes.size).put("positiveControl", positive).put("privateCanariesPresent", positive))
+                    .put("bytes", bytes.size).put("positiveControl", positive).put("privateCanariesPresent", positive)
+                    .put("legacyRulesMetadataSupplied", suppliedLegacyRules)
+                    .put("systemBackupEligible", systemEligible ?: JSONObject.NULL))
             }
         } finally {
             for (scope in listOf(ce, de)) {
@@ -84,5 +110,19 @@ class PlatformBackupTest {
             }
         }
         instrumentation.sendStatus(2, Bundle().apply { putString("financegenie_backup_extraction", result.toString()) })
+    }
+
+    /** Read-only query as shell; no backup setting, transport or permission changes. */
+    private fun legacySystemEligibility(context: Context): Boolean {
+        check(Build.VERSION.SDK_INT == 26)
+        require(context.packageName.matches(Regex("com\\.financegenie\\.android\\.(acceptance|backupcontrol)")))
+        val stub = Class.forName("android.app.backup.IBackupManager\$Stub")
+        val transaction = stub.getDeclaredField("TRANSACTION_isAppEligibleForBackup").apply { isAccessible = true }.getInt(null)
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val reply = ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(
+            "service call backup $transaction s16 ${context.packageName}")).use { it.readBytes().toString(Charsets.UTF_8) }
+        val match = Regex("""Parcel\(\s*(?:0x[0-9a-fA-F]+:\s*)?00000000\s+(00000000|00000001)\b""").find(reply)
+        assertNotNull("BackupManager eligibility must return a boolean: ${reply.take(200)}", match)
+        return requireNotNull(match).groupValues[1] == "00000001"
     }
 }

@@ -39,7 +39,10 @@ def main() -> int:
 
     def adb(label: str, arguments: list[str], timeout: int = 600) -> str:
         print(label, flush=True)
-        result = subprocess.run(["adb", "-s", serial, *arguments], capture_output=True, text=True, timeout=timeout)
+        try:
+            result = subprocess.run(["adb", "-s", serial, *arguments], capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(label + " timed out") from None
         output = (result.stdout + result.stderr).replace(serial, "<test-device>")
         if result.returncode:
             raise RuntimeError(label + " failed: " + output[-5000:])
@@ -62,8 +65,11 @@ def main() -> int:
             location = adb("Locate installed " + package, ["shell", "pm", "path", package]).strip().splitlines()
             if not path.is_file() or len(location) != 1 or not location[0].startswith("package:/"):
                 raise RuntimeError("Install the current candidate/test APKs before using --reuse-candidate")
-            result = subprocess.run(["adb", "-s", serial, "exec-out", "cat", location[0][len("package:"):]],
-                                    capture_output=True, timeout=60)
+            try:
+                result = subprocess.run(["adb", "-s", serial, "exec-out", "cat", location[0][len("package:"):]],
+                                        capture_output=True, timeout=60)
+            except subprocess.TimeoutExpired:
+                raise RuntimeError("Installed APK read timed out: " + package) from None
             if result.returncode or hashlib.sha256(result.stdout).digest() != hashlib.sha256(path.read_bytes()).digest():
                 raise RuntimeError("Installed APK differs from this build: " + package)
 

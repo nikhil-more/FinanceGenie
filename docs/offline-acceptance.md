@@ -89,6 +89,17 @@ phone's security settings. This proves actual framework extraction/filtering;
 it does not claim a physical OEM migration or cloud restore. Full JSON backup
 and fresh-install recovery provide the independent app recovery path.
 
+Android 8 needs a separate legacy check. Its
+[package parser](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-8.0.0_r1/core/java/android/content/pm/PackageParser.java#L3124)
+omits the XML resource from runtime metadata when backup is disabled, and the
+[backup service](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-8.0.0_r1/services/backup/java/com/android/server/backup/BackupManagerService.java#L720)
+rejects the app before extraction. The API 26 test queries that actual service
+as shell, requiring an ineligible candidate and eligible control, without changing
+backup settings. To additionally exercise the declared XML, the forced-agent
+test supplies its resource on an `ApplicationInfo` copy only. Results explicitly
+mark `legacyRulesMetadataSupplied`; they are not described as as-installed legacy
+agent extraction. Modern cloud/device-transfer extraction uses installed rules.
+
 ## Android version coverage and human review
 
 CI builds the APKs once and runs the local storage/UI, CSV, recovery and acceptance

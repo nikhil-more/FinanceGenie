@@ -61,8 +61,14 @@ internal fun ComposeContentTestRule.field(tag: String, value: String) {
         try {
             onNodeWithTag(tag).performScrollTo()
             onNodeWithTag(tag).performTextReplacement(value)
-            waitUntil(15_000) {
-                runCatching { onNodeWithTag(tag).assertTextContains(value); true }.getOrDefault(false)
+            try {
+                waitUntil(15_000) {
+                    runCatching { onNodeWithTag(tag).assertTextContains(value); true }.getOrDefault(false)
+                }
+            } catch (error: androidx.compose.ui.test.ComposeTimeoutException) {
+                val actual = runCatching { onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().map { it.config.toString() } }
+                    .getOrElse { listOf(it.message.orEmpty()) }
+                throw AssertionError("Synthetic input $tag did not show '$value'; actual: $actual", error)
             }
             return
         } catch (error: AssertionError) {
@@ -127,7 +133,7 @@ class ManagementUiTest {
         compose.saveForm()
         val account = runBlocking { data.repository.read().accounts.single() }
         assertEquals(-10_025L, account.value.openingBalanceMinor)
-        compose.onNodeWithText("Amount owed").assertIsDisplayed()
+        compose.onNodeWithText("Amount owed").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("balance_${account.value.id}").assertMoneyEquals("₹100.25")
         compose.onNodeWithTag("observe_${account.value.id}").performScrollTo().performClick()
         compose.field("field_amount", "110.25")

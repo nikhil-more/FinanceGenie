@@ -409,6 +409,15 @@ architecture decisions live in [the decision record](docs/decisions.md).
   installed APK hashes and clears only synthetic candidate data while retaining
   its installation/UID. CI still uses fresh installs; phone readiness is pending
   rechecking the current install's blocker rule.
+- **Current release evidence:** Full golden/recovery/delete/fresh-reader journeys
+  pass on API 26 and API 34. Installed-rules cloud/device-transfer extraction and
+  its positive control pass on API 34. The remaining red checks are API 26's
+  forced-agent legacy setup and two existing API 34 UI assumptions. Android 8
+  omits the XML resource when backup is disabled, so test real service eligibility
+  separately, then explicitly label a copied-metadata XML extraction test. Scroll
+  the account's owed label into view on shorter screens and retain exact search
+  assertions with better synthetic diagnostics. Production behavior remains
+  unchanged; these corrected checks still require successful reruns.
 
 ## Current actions and outstanding checks
 

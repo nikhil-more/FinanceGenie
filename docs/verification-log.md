@@ -818,5 +818,32 @@ are maintained in [progress_tracker.md](../progress_tracker.md).
   that used `performScrollTo` on an uncomposed lazy-list child. The test now scrolls
   the transaction list to the tagged action before finding/clicking it. This is
   a harness correction, without changing app behavior or expected money values.
+- **Further release progress:** Both emulators then passed purchase edits,
+  linked-delete/undo and the process-local time-zone check. The next failure was
+  a test switching from Categories to Overview without returning to Settings;
+  revisiting the Settings tab correctly restored Categories. The test now uses
+  Back before switching tabs. Full recovery/restart/framework and regression
+  results remain pending on the next matrix attempt.
+- **Per-install blocker handling:** A fresh phone test after whitelisting still
+  exited early after reinstalling the candidate. Reinstallation may have discarded
+  the blocker's per-install rule. The phone driver now supports `--reuse-candidate`:
+  verify both installed APK hashes, retain their installation, and clear only
+  synthetic acceptance data. CI remains a fresh-install check. Three host-only
+  mocked-ADB guard checks confirm stale APK rejection before reset and timeout
+  errors without device IDs; these are not device-acceptance passes. The current
+  candidate's blocker rule/readiness is being rechecked before more phone tests.
+- **Release journeys now pass on API 26/34:** Complete golden entry, budget,
+  edit/delete/undo, malformed-input preservation, local deletion, new-profile
+  restore and fresh-process reads passed. API 34 also passed both installed-rules
+  extraction destinations and the positive control. Full CI is still red: two
+  existing API 34 UI checks need smaller-screen scrolling/input diagnostics, and
+  API 26's forced-agent check incorrectly bypassed the legacy eligibility gate.
+  The API 26 parser omits `fullBackupContent` metadata when backup is disabled;
+  the actual service rejects such apps before extraction. The corrected test
+  queries real system eligibility and separately forces declared XML on a copy
+  of metadata, explicitly labelled in its result. See the primary-source links
+  in [the acceptance guide](offline-acceptance.md). No production backup policy
+  or financial calculation has been changed. Corrected legacy/runtime results
+  and the remaining regressions still need successful runs.
 - **Status:** Gate A remains IN PROGRESS until the release journey/fresh reader,
   supported-version checks and full-app human accessibility/privacy review pass.
