@@ -15,6 +15,7 @@ import androidx.benchmark.macro.FrameTimingMetric
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
+import androidx.test.uiautomator.Configurator
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import org.junit.Assert.assertTrue
@@ -99,6 +100,11 @@ class OfflineReadinessBenchmark {
         else context.registerReceiver(receiver, filter, permission, null)
         val confirmedTimes = mutableListOf<Double>()
         val committedTimes = mutableListOf<Double>()
+        val configurator = Configurator.getInstance()
+        val previousIdleTimeout = configurator.waitForIdleTimeout
+        // Loaded-frame + exact visible-value assertions provide readiness. Repeated
+        // generic idle waits add automation latency after that frame is already ready.
+        configurator.waitForIdleTimeout = 0
         try {
             repeat(20) {
                 device.executeShellCommand("am force-stop $target")
@@ -129,9 +135,11 @@ class OfflineReadinessBenchmark {
                 confirmedTimes += (confirmedAtNanos - startedAtNanos) / 1_000_000.0
             }
         } finally {
+            configurator.waitForIdleTimeout = previousIdleTimeout
             context.unregisterReceiver(receiver)
         }
         val result = JSONObject().put("records", 10_000).put("operations", 20).put("processColdVerified", true)
+            .put("uiAutomatorIdleTimeoutMs", 0)
             .put("method", "Explicit Activity launch to verified committed Overview; warm OS/SQLite caches; installed compilation state")
             .put("launchToConfirmedOverviewMs", stats(confirmedTimes))
             .put("launchToCommittedFrameMs", stats(committedTimes))

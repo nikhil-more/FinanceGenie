@@ -118,6 +118,7 @@ def main() -> int:
             if len(runs) != 20:
                 raise RuntimeError("Startup measurement must contain exactly 20 runs")
             startup[metric] = stats(runs)
+        startup["uiAutomatorIdleTimeoutMs"] = measured["uiAutomatorIdleTimeoutMs"]
     operations = {}
     if not args.startup_only:
         output = instrument("Measure 30 summaries, searches and saves", TARGET + ".test/" + RUNNER, [
@@ -127,6 +128,12 @@ def main() -> int:
         if not match:
             raise RuntimeError("In-process performance result is missing")
         operations = json.loads(match.group(1))
+        if (operations.get("records"), operations.get("operations"), operations.get("budgetOperations")) != (10_000, 30, 30):
+            raise RuntimeError("Operations must verify 30 expense and 30 budget saves on the 10,000-event fixture")
+        for metric in ("snapshotReadMs", "summaryIncludingReadMs", "pagedSearchMs", "saveToVisibleMs", "budgetSaveToVisibleMs"):
+            if len(operations[metric]["runs"]) != 30:
+                raise RuntimeError("Every operation requires exactly 30 timing samples")
+            operations[metric] = stats(operations[metric]["runs"])
     if artifact_hashes != [hashlib.sha256(path.read_bytes()).hexdigest() for path in apks]:
         raise RuntimeError("Benchmark APKs changed during measurement; rebuild before starting a new run")
     report = {
@@ -145,6 +152,7 @@ def main() -> int:
             "summaryP95AtMost300ms": operations["summaryIncludingReadMs"]["p95"] <= 300 if operations else None,
             "pagedSearchP95AtMost500ms": operations["pagedSearchMs"]["p95"] <= 500 if operations else None,
             "saveToVisibleP95AtMost300ms": operations["saveToVisibleMs"]["p95"] <= 300 if operations else None,
+            "budgetSaveToVisibleP95AtMost300ms": operations["budgetSaveToVisibleMs"]["p95"] <= 300 if operations else None,
         },
     }
     path = args.output / "summary.json"

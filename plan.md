@@ -409,6 +409,12 @@ Targets below are proposed engineering budgets, not measured results. In Step 0 
 
 APK size, memory peaks, frame timing and web bundle/query costs get an initial baseline; investigate material regression rather than invent an unsupported universal limit. A missing benchmark/device is `NOT RUN`, never a performance pass.
 
+On 10 November 2026 the user accepted the measured budget Save-to-visible P95 of
+314.52 ms (approximately 315 ms) for this individual-use app. Preserve that result
+as an approved exception to the initial 300 ms budget target, without claiming the
+original target passed. Expense-save and startup targets remain unchanged. Revisit
+material regressions against the recorded budget baseline.
+
 CI grows with the code: Android build/unit/lint/format from Step 1; Room/Compose instrumented tests when available; parser corpus in B; rules/protocol tests in C; TypeScript/browser tests in D. Run critical tests on every relevant change, full release acceptance before each release. Do not require unrelated web/cloud tests before those components exist.
 
 ## 8. End-to-end acceptance matrix

@@ -41,6 +41,22 @@ android {
             versionNameSuffix = "-recovery-check"
             matchingFallbacks += listOf("debug")
         }
+        create("acceptance") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".acceptance"
+            versionNameSuffix = "-acceptance"
+            isDebuggable = false
+            matchingFallbacks += listOf("release")
+        }
+        create("backupControl") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".backupcontrol"
+            versionNameSuffix = "-backup-control"
+            isDebuggable = false
+            matchingFallbacks += listOf("release")
+        }
     }
 
     testBuildType = providers.gradleProperty("financegenieTestBuildType").getOrElse("debug")

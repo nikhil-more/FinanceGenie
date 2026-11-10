@@ -19,6 +19,10 @@ architecture decisions live in [the decision record](docs/decisions.md).
 - Update this file after each implementation step and whenever its status changes.
   Every completed step records its decision, alternative, reason, consequence and
   revisit condition. Planned tradeoffs are not represented as decisions already made.
+- On 10 November 2026 the user accepted the observed approximately 315 ms budget
+  Save-to-visible P95 for individual use. Retain the actual 314.52 ms result and its
+  original 300 ms target miss; this approved tradeoff does not relax expense-save
+  or startup targets. Extra report caching for that small difference is not adopted.
 - Status is `NOT STARTED`, `IN PROGRESS`, `PASS`, `BLOCKED` or `DEFERRED`.
   Record implementation and verification separately; a mandatory unrun check
   cannot be marked PASS. Pending device/manual checks never disappear from a gate.
@@ -39,7 +43,7 @@ architecture decisions live in [the decision record](docs/decisions.md).
 | 6 | Offline overview and analytics | PASS | 66 JVM, 27 storage, 23 UI tests and fresh-process checks pass; 20-launch/30-operation baseline recorded, with startup limitation retained for Gate A | Below |
 | 7 | CSV preview/import/undo | PASS | 79 JVM, 35 phone storage, 31 UI tests and four fresh-reader checks pass; 10,000-row import verified in 5.25s | Below |
 | 8 | Backup, restore, export and local deletion | PASS | 86 JVM, 42 storage, 35 UI tests; genuine fresh-install recovery and three crash boundaries pass | Below |
-| 9 | Offline acceptance / Gate A | NOT STARTED | Requires Steps 0–8 and phone evidence | Record when started |
+| 9 | Offline acceptance / Gate A | IN PROGRESS | Release-like smoke, current performance, full-app accessibility and OS backup verification | Below |
 | 10 | Supported notification parsers | NOT STARTED | B scope decision after A | Record when started |
 | 11 | Consent and durable capture | NOT STARTED | After Step 10 | Record when started |
 | 12 | Replay and duplicate reconciliation | NOT STARTED | After Step 11 | Record when started |
@@ -348,6 +352,36 @@ architecture decisions live in [the decision record](docs/decisions.md).
   Builds/lint/hygiene pass; Room v1 and normal permissions are unchanged.
 - **Evidence:** [Behavior/format/drill](docs/backup-recovery.md),
   [verification](docs/verification-log.md#step-8--personal-backup-recovery-and-local-deletion--2026-11-10).
+
+### Step 9 — Offline acceptance and personal-use Gate A
+
+- **Decision in progress:** Verify the production container in an isolated,
+  non-debuggable release-like candidate. Keep the normal development ledger intact;
+  locally signed test artifacts do not configure distribution signing/publication.
+- **Performance:** The first current 10,000-record run confirms all twenty cold
+  launches at 775.52 ms P95 and thirty expense saves at 296.89 ms P95. The startup
+  driver removes generic UIAutomator idle waits while retaining frame/launch/PID
+  correlation and exact visible-value verification. Preserve the earlier 2.28 s
+  result and explain this measurement correction; do not rename it AndroidX TTFD.
+- **Accepted tradeoff:** Budget Save-to-visible P95 is 314.52 ms over thirty edits.
+  The user explicitly accepted approximately 315 ms on 10 November 2026. Preserve
+  its original 300 ms miss, accept this baseline for personal use, and omit the
+  additional report-caching optimization. Other timing targets stay unchanged.
+- **Coverage plan:** Repair the remote SDK setup failure and run API 26/34 device
+  checks in CI; this workspace has no emulator/KVM and only limited free disk.
+  Physical A063/API 35 checks and the full-app human accessibility review remain
+  independent evidence. No emulated performance result substitutes for the phone.
+- **Backup verification:** Actual Android framework extraction on API 35 produced
+  zero candidate bytes for both cloud and device-transfer destinations. The
+  isolated positive control produced 39,484 bytes for each destination and
+  contained all six CE/DE file, preference and database canaries. The phone's
+  disabled backup setting was preserved and the control was uninstalled.
+  Any reflection permission is confined to the instrumentation process. This does
+  not claim a physical OEM transfer or cloud restore that was not performed.
+- **Verification:** 86 JVM tests and debug lint pass after removing the extra
+  calculation cache; the financial engine and schema are unchanged. Release
+  smoke/restart, supported-version CI, full-app accessibility and final
+  packaging/log checks remain in progress.
 
 ## Current actions and outstanding checks
 

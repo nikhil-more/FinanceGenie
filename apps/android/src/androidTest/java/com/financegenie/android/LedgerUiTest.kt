@@ -51,9 +51,28 @@ internal suspend fun seedUiAccounts(repository: LedgerRepository) {
 }
 
 internal typealias AppComposeRule = AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity>
-internal fun ComposeContentTestRule.waitTag(tag: String) = waitUntil(15_000) { onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }
+internal fun ComposeContentTestRule.waitTag(tag: String) = waitUntil(15_000) {
+    runCatching { onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false)
+}
 internal fun ComposeContentTestRule.waitNoTag(tag: String) = waitUntil(15_000) { onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isEmpty() }
-internal fun ComposeContentTestRule.field(tag: String, value: String) { onNodeWithTag(tag).performScrollTo().performTextReplacement(value) }
+internal fun ComposeContentTestRule.field(tag: String, value: String) {
+    waitTag(tag)
+    repeat(3) { attempt ->
+        try {
+            onNodeWithTag(tag).performScrollTo()
+            onNodeWithTag(tag).performTextReplacement(value)
+            waitUntil(15_000) {
+                runCatching { onNodeWithTag(tag).assertTextContains(value); true }.getOrDefault(false)
+            }
+            return
+        } catch (error: AssertionError) {
+            if (attempt == 2 || !error.message.orEmpty().contains("node is no longer in the tree", ignoreCase = true)) throw error
+            // Keyboard/window transitions can detach a just-fetched semantics node.
+            // Reacquire the same control; financial inputs/assertions are unchanged.
+            waitForIdle()
+        }
+    }
+}
 internal fun ComposeContentTestRule.choose(tag: String, id: String) {
     onNodeWithTag(tag).performScrollTo().performClick()
     onNodeWithTag("choice_$id").performScrollTo().performClick()

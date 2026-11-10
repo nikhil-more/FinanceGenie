@@ -26,6 +26,9 @@ import com.financegenie.android.domain.LedgerTransaction
 import com.financegenie.android.domain.MonthlyBudget
 import com.financegenie.android.domain.TransactionKind
 import com.financegenie.android.privacy.PrivacyPreferences
+import com.financegenie.android.recovery.LocalProfileStore
+import android.util.AtomicFile
+import java.io.File
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -74,11 +77,16 @@ class BenchmarkApplication : FinanceGenieApplication() {
     }
 
     val benchmarkClock: Clock = Clock.fixed(Instant.parse("2026-11-30T12:00:00Z"), ZoneOffset.UTC)
-    private val database = lazy { FinanceGenieDatabase.open(this, "performance-fixture.db", benchmarkClock) }
+    private val databaseName = "performance-fixture-ledger.db"
+    private val database = lazy { FinanceGenieDatabase.open(this, databaseName, benchmarkClock) }
+    private val profiles = lazy { LocalProfileStore(this, benchmarkClock, "performance-fixture") { name ->
+        if (name == databaseName) database.value else FinanceGenieDatabase.open(this, name, benchmarkClock)
+    } }
     override val container: AppContainer by lazy {
         object : AppContainer {
             override val clock = benchmarkClock
-            override val repository by lazy { freshRepository() }
+            override val profiles get() = this@BenchmarkApplication.profiles.value
+            override val repository get() = profiles.session.value.repository
             override val privacy = PrivacyPreferences(getSharedPreferences("benchmark-only", MODE_PRIVATE))
         }
     }
@@ -87,10 +95,11 @@ class BenchmarkApplication : FinanceGenieApplication() {
     fun freshRepository() = RoomLedgerRepository(database.value, benchmarkClock)
 
     suspend fun prepareFixture() = withContext(Dispatchers.IO) {
-        check(packageName.endsWith(".benchmark") && !database.isInitialized())
+        check(packageName.endsWith(".benchmark") && !database.isInitialized() && !profiles.isInitialized())
         // This build has its own package/data sandbox, and this named file contains synthetic data only.
-        deleteDatabase("performance-fixture.db")
-        val seedDatabase = FinanceGenieDatabase.open(this@BenchmarkApplication, "performance-fixture.db", benchmarkClock)
+        databaseList().filter { it.startsWith("performance-fixture-") || it == "performance-fixture.db" }.forEach { deleteDatabase(it) }
+        AtomicFile(File(filesDir, "performance-fixture-active-profile")).delete()
+        val seedDatabase = FinanceGenieDatabase.open(this@BenchmarkApplication, databaseName, benchmarkClock)
         try {
             val repository = RoomLedgerRepository(seedDatabase, benchmarkClock)
             val accounts = listOf(AccountKind.BANK, AccountKind.CASH, AccountKind.CREDIT_CARD).mapIndexed { index, kind ->

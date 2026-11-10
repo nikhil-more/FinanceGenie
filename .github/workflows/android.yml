@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -26,6 +26,8 @@ jobs:
         with:
           python-version: '3.12'
       - uses: gradle/actions/setup-gradle@v4
+      - name: Set up Android command-line tools
+        uses: android-actions/setup-android@v3
       - name: Install required Android SDK packages
         run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0' 'platform-tools'
       - name: Check repository hygiene
@@ -44,6 +46,18 @@ jobs:
         run: >-
           ./gradlew --no-daemon -PfinancegenieTestBuildType=benchmark
           :apps:android:assembleBenchmarkAndroidTest
+      - name: Compile recovery drill
+        run: >-
+          ./gradlew --no-daemon -PfinancegenieTestBuildType=recoveryCheck
+          :apps:android:assembleRecoveryCheck :apps:android:assembleRecoveryCheckAndroidTest
+      - name: Compile release-like acceptance
+        run: >-
+          ./gradlew --no-daemon -PfinancegenieTestBuildType=acceptance
+          :apps:android:assembleAcceptance :apps:android:assembleAcceptanceAndroidTest
+      - name: Compile backup positive control
+        run: >-
+          ./gradlew --no-daemon -PfinancegenieTestBuildType=backupControl
+          :apps:android:assembleBackupControl :apps:android:assembleBackupControlAndroidTest
       - name: Verify exported Room schemas are committed
         run: |
           git diff --exit-code -- apps/android/schemas/
@@ -60,3 +74,61 @@ jobs:
         with:
           name: financegenie-dev
           path: apps/android/build/outputs/apk/debug/android-debug.apk
+      - name: Upload device-check APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: financegenie-device-apks
+          path: apps/android/build/outputs/apk/
+
+  emulator:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [26, 34]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: android-actions/setup-android@v3
+      - uses: actions/download-artifact@v4
+        with:
+          name: financegenie-device-apks
+          path: apps/android/build/outputs/apk/
+      - name: Enable KVM in this disposable runner
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify supported Android version
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          cores: 2
+          ram-size: 3072M
+          disable-animations: true
+          script: |
+            python3 scripts/verify_storage_on_device.py --ui
+            python3 scripts/verify_csv_on_device.py --output /tmp/csv-acceptance
+            python3 scripts/verify_recovery_on_device.py --output /tmp/recovery-acceptance
+            python3 scripts/verify_acceptance_on_device.py --output /tmp/release-acceptance
+      - name: Upload synthetic device-check results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-api-${{ matrix.api }}
+          path: |
+            /tmp/csv-acceptance/
+            /tmp/recovery-acceptance/
+            /tmp/release-acceptance/
+          if-no-files-found: ignore

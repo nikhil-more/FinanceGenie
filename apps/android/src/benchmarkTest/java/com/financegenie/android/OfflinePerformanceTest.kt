@@ -8,12 +8,15 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import com.financegenie.android.domain.DateRange
 import com.financegenie.android.domain.LedgerCalculator
 import com.financegenie.android.ui.LedgerViewModel
 import com.financegenie.android.ui.TransactionDraft
+import com.financegenie.android.ui.BudgetDraft
 import com.financegenie.android.ui.money
 import java.time.YearMonth
 import java.util.UUID
@@ -42,6 +45,7 @@ class OfflinePerformanceTest {
         val summaryTimes = mutableListOf<Double>()
         val searchTimes = mutableListOf<Double>()
         val saveTimes = mutableListOf<Double>()
+        val budgetSaveTimes = mutableListOf<Double>()
         var sampledPssKb = Debug.getPss()
         repeat(30) {
             var start = SystemClock.elapsedRealtimeNanos()
@@ -72,14 +76,43 @@ class OfflinePerformanceTest {
                 compose.onAllNodes(hasTestTag("metric_spending") and hasText(expected)).fetchSemanticsNodes().isNotEmpty()
             }
             compose.waitForIdle()
+            compose.onNodeWithTag("metric_spending").assertIsDisplayed()
             saveTimes += millisSince(start)
             compose.dismissNotice()
             sampledPssKb = maxOf(sampledPssKb, Debug.getPss())
         }
         assertEquals(10_030, repository.read().transactions.size)
+        compose.onNodeWithTag("tab_budgets").performClick()
+        compose.onNodeWithTag("budget_list").performScrollToNode(hasTestTag("budget_limit_overall"))
+        repeat(30) { index ->
+            val record = repository.read().budgets.single()
+            val limit = (5_001L + index) * 100
+            compose.runOnUiThread {
+                val model = ViewModelProvider(compose.activity)[LedgerViewModel::class.java]
+                model.editBudget(record)
+                val draft = model.editor.value as BudgetDraft
+                model.updateEditor(draft.copy(amount = (5_001 + index).toString()))
+            }
+            compose.waitTag("save_form")
+            val start = SystemClock.elapsedRealtimeNanos()
+            compose.onNodeWithTag("save_form").performClick()
+            compose.waitUntil(15_000) {
+                compose.onAllNodes(hasTestTag("budget_limit_overall") and hasText(money(limit))).fetchSemanticsNodes().isNotEmpty() &&
+                    compose.onAllNodes(hasTestTag("budget_remaining_overall") and hasText(money(limit - initial.netSpendingMinor - 30))).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.waitForIdle()
+            compose.onNodeWithTag("budget_limit_overall").assertIsDisplayed()
+            budgetSaveTimes += millisSince(start)
+            compose.dismissNotice()
+            sampledPssKb = maxOf(sampledPssKb, Debug.getPss())
+        }
+        assertEquals(503_000L, repository.read().budgets.single().value.limitMinor)
+        assertEquals(31L, repository.read().budgets.single().metadata.revision)
         val result = JSONObject().put("records", 10_000).put("operations", 30)
+            .put("budgetOperations", 30)
             .put("snapshotReadMs", stats(readTimes)).put("summaryIncludingReadMs", stats(summaryTimes))
             .put("pagedSearchMs", stats(searchTimes)).put("saveToVisibleMs", stats(saveTimes))
+            .put("budgetSaveToVisibleMs", stats(budgetSaveTimes))
             .put("sampledPeakPssKb", sampledPssKb)
         InstrumentationRegistry.getInstrumentation().sendStatus(2, Bundle().apply {
             putString("financegenie_performance", result.toString())
